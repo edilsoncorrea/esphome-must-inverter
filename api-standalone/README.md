@@ -106,14 +106,69 @@ Para configurar WiFi:
 4. Configure SSID e senha WiFi
 5. Dispositivo reinicia e conecta na rede
 
-### 3. **Configuração de Credenciais API**
+### 3. **Painel de Monitoramento em Tempo Real** ⭐ NOVO!
+Quando o dispositivo estiver conectado ao WiFi, acessando `http://<IP_DO_DISPOSITIVO>/` você terá:
+
+#### Interface Moderna e Responsiva:
+- 📱 **Design responsivo** - Funciona perfeitamente em celular, tablet e desktop
+- 🎨 **Interface moderna** - Cards organizados com gradientes e animações suaves
+- ⚡ **Atualização automática** - Dados atualizados a cada 5 segundos sem recarregar a página
+
+#### Cards Organizados por Categoria:
+
+**🔋 Bateria:**
+- Estado de carga (SOC) em destaque
+- Tensão, corrente e potência
+- Temperatura da bateria
+
+**☀️ Painel Solar:**
+- Potência total em destaque
+- Tensão e corrente PV
+
+**⚡ Carregador:**
+- Tensão, corrente e potência
+- Energia total acumulada
+
+**🔌 Inversor:**
+- Modo de operação com badge colorido
+- Tensão, corrente e frequência AC
+- Potência e percentual de carga
+
+**📊 Energia Acumulada:**
+- Total carregado
+- Total descarregado
+
+**💻 Sistema:**
+- Temperatura do dispositivo
+- Última atualização
+- Links rápidos para API e configuração
+
+### 4. **Configuração de Credenciais API**
 Acesse via web: `http://192.168.4.1` (ou IP da rede)
 
-No painel web você pode configurar:
-- **API Username**: Campo "API Username" (padrão: `admin`)
-- **API Password**: Campo "API Password" (padrão: `admin123`)
+As credenciais padrão são:
+- **API Username:** `admin`
+- **API Password:** `admin123`
 
-### 4. **Acessando a API REST**
+⚠️ **Importante:** Estas credenciais são usadas apenas para acessar a API REST via autenticação HTTP Basic. 
+O painel web de monitoramento (interface visual) **não requer autenticação** e pode ser acessado diretamente.
+
+### 5. **Modos de Acesso**
+
+#### Modo Não Configurado (AP Mode):
+Quando o dispositivo não está conectado a nenhuma rede WiFi:
+- Acesse `http://192.168.4.1`
+- Será exibida uma página simples com botão para configurar WiFi
+- Clique em "Configurar WiFi" para acessar o portal captivo
+
+#### Modo Configurado (Connected):
+Quando o dispositivo está conectado à sua rede WiFi:
+- Acesse `http://<IP_DO_DISPOSITIVO>/`
+- **Painel completo de monitoramento** é exibido automaticamente
+- Todos os dados são atualizados em tempo real a cada 5 segundos
+- Não requer autenticação para visualização
+
+### 6. **Acessando a API REST**
 
 #### Endpoint Principal - GET All Data
 ```bash
@@ -167,7 +222,7 @@ GET http://192.168.4.1/sensor/battery_voltage_inverter
 GET http://192.168.4.1/sensor/state_of_charge
 ```
 
-### 5. **Reset para Modo AP**
+### 7. **Reset para Modo AP**
 
 #### Opção 1: Via Botão Físico (Boot Button)
 1. Mantenha pressionado o botão BOOT (GPIO0) por **5 segundos**
@@ -175,26 +230,50 @@ GET http://192.168.4.1/sensor/state_of_charge
 3. Reiniciará em modo AP
 
 #### Opção 2: Via Web Interface
-1. Acesse `http://<IP>/`
-2. Clique no botão "Factory Reset (Clears WiFi)"
+1. Acesse `http://<IP>/` e clique em "Config" no card Sistema
+2. OU acesse diretamente `http://<IP>/config`
 3. Dispositivo reinicia em modo AP
 
 #### Opção 3: Via API REST
 ```bash
-POST http://192.168.4.1/button/factory_reset_btn/press
-Authorization: Basic YWRtaW46YWRtaW4xMjM=
+# Não implementado - use as opções 1 ou 2
 ```
 
-### 6. **Monitoramento via Web**
+### 8. **Monitoramento via Web**
 
-Acesse: `http://<IP_DO_DISPOSITIVO>/`
+**Painel Principal:** `http://<IP_DO_DISPOSITIVO>/`
 
-Você verá:
-- Status da conexão WiFi
-- IP atual
-- Todos os valores dos sensores em tempo real
-- Campos para alterar credenciais API
-- Botões de controle (restart, factory reset)
+#### Quando NÃO Configurado (Modo AP):
+- Página simples com botão "Configurar WiFi"
+- Redirecionamento para portal captivo
+
+#### Quando Configurado (Conectado):
+**Painel Completo de Monitoramento** com:
+- ✅ Atualização automática a cada 5 segundos
+- ✅ Cards organizados por categoria
+- ✅ Valores em destaque com gradientes coloridos
+- ✅ Interface responsiva (mobile-friendly)
+- ✅ Animações suaves nos cards
+- ✅ Indicador de última atualização
+- ✅ Links rápidos para API JSON e configuração
+- ✅ Modo de operação do inversor com badge
+- ✅ Todas as métricas importantes visíveis de uma vez
+
+**Dados Exibidos:**
+1. **Bateria**: SOC, tensão, corrente, potência, temperatura
+2. **Painel Solar**: Potência total, tensão, corrente
+3. **Carregador**: Tensão, corrente, potência, energia acumulada
+4. **Inversor**: Modo, AC V/A/Hz, potência, carga %
+5. **Energia**: Total carregado/descarregado
+6. **Sistema**: Temperatura do dispositivo, timestamp
+
+**Recursos Visuais:**
+- 🔋 Battery com SOC em destaque (gradiente roxo)
+- ☀️ Solar com potência em destaque (gradiente rosa)
+- ⚡ Charger com métricas de carga
+- 🔌 Inverter com badge de modo de operação
+- 📊 Totalizadores de energia
+- 💻 Info do sistema com ações rápidas
 
 ## Instalação e Flash
 

@@ -181,13 +181,18 @@ bool checkAuthentication(AsyncWebServerRequest *request) {
 }
 
 void handleRoot(AsyncWebServerRequest *request) {
-  String html = F(R"(
+  // Check if WiFi is connected (not in AP mode)
+  bool isConfigured = WiFi.status() == WL_CONNECTED && String(WiFi.SSID()) != String(AP_SSID);
+  
+  if (!isConfigured) {
+    // Show configuration page if not connected
+    String html = F(R"(
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset='UTF-8'>
   <meta name='viewport' content='width=device-width, initial-scale=1.0'>
-  <title>MUST Inverter API</title>
+  <title>MUST Inverter - Configuração</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -213,128 +218,404 @@ void handleRoot(AsyncWebServerRequest *request) {
     .header h1 { font-size: 28px; margin-bottom: 10px; }
     .header p { opacity: 0.9; font-size: 14px; }
     .content { padding: 30px; }
-    .section {
-      margin-bottom: 25px;
-      padding-bottom: 25px;
-      border-bottom: 1px solid #eee;
-    }
-    .section:last-child { border-bottom: none; }
-    .section h2 {
-      color: #667eea;
-      font-size: 18px;
-      margin-bottom: 15px;
-      display: flex;
-      align-items: center;
-    }
-    .section h2::before {
-      content: '●';
-      margin-right: 10px;
-      font-size: 12px;
-    }
-    .info-box {
-      background: #f8f9fa;
-      padding: 15px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-    .info-box label {
-      display: block;
-      font-size: 12px;
-      color: #666;
-      margin-bottom: 5px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .info-box .value {
-      font-size: 16px;
-      color: #333;
-      font-weight: 600;
-    }
-    .api-endpoint {
-      background: #fff;
-      border: 2px solid #667eea;
-      border-radius: 8px;
-      padding: 15px;
-      margin-bottom: 10px;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      word-break: break-all;
-    }
     .btn {
       display: inline-block;
-      padding: 12px 24px;
+      padding: 15px 30px;
       background: #667eea;
       color: white;
       text-decoration: none;
       border-radius: 8px;
       font-weight: 600;
       transition: background 0.3s;
+      text-align: center;
+      width: 100%;
+      margin-bottom: 15px;
     }
     .btn:hover { background: #764ba2; }
-    .status {
+  </style>
+</head>
+<body>
+  <div class='container'>
+    <div class='header'>
+      <h1>⚙️ Configuração Necessária</h1>
+      <p>Configure o WiFi para acessar o painel</p>
+    </div>
+    <div class='content'>
+      <p style='text-align: center; margin-bottom: 20px;'>
+        O dispositivo está em modo de configuração. Configure a rede WiFi para acessar o painel de monitoramento.
+      </p>
+      <a href='/wifi' class='btn'>🌐 Configurar WiFi</a>
+    </div>
+  </div>
+</body>
+</html>
+    )");
+    request->send(200, "text/html", html);
+    return;
+  }
+  
+  // Show full monitoring dashboard when configured
+  String html = F(R"(
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset='UTF-8'>
+  <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+  <title>MUST Inverter - Monitor</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f7fa;
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      margin-bottom: 20px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+    }
+    .header h1 { font-size: 32px; margin-bottom: 5px; }
+    .header p { opacity: 0.9; font-size: 14px; }
+    .header .status {
       display: inline-block;
-      padding: 5px 12px;
+      padding: 5px 15px;
+      background: rgba(255,255,255,0.2);
       border-radius: 20px;
       font-size: 12px;
+      margin-top: 10px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+    .card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 20px rgba(0,0,0,0.12);
+    }
+    .card-header {
+      display: flex;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    .card-header .icon {
+      font-size: 28px;
+      margin-right: 12px;
+    }
+    .card-header h2 {
+      font-size: 20px;
+      color: #333;
+    }
+    .metric {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #f5f5f5;
+    }
+    .metric:last-child { border-bottom: none; }
+    .metric-label {
+      font-size: 14px;
+      color: #666;
+    }
+    .metric-value {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+    .metric-unit {
+      font-size: 14px;
+      color: #999;
+      font-weight: normal;
+    }
+    .highlight {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    .highlight .big-number {
+      font-size: 48px;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .highlight .label {
+      font-size: 16px;
+      opacity: 0.9;
+    }
+    .mode-badge {
+      display: inline-block;
+      padding: 8px 16px;
+      background: #4CAF50;
+      color: white;
+      border-radius: 20px;
+      font-size: 14px;
       font-weight: 600;
     }
-    .status.online {
-      background: #d4edda;
-      color: #155724;
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    .btn {
+      flex: 1;
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      text-decoration: none;
+      border-radius: 8px;
+      font-weight: 600;
+      text-align: center;
+      transition: background 0.3s;
+      border: none;
+      cursor: pointer;
+    }
+    .btn:hover { background: #764ba2; }
+    .btn-secondary {
+      background: #6c757d;
+    }
+    .btn-secondary:hover { background: #5a6268; }
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: #666;
+    }
+    @media (max-width: 768px) {
+      .grid { grid-template-columns: 1fr; }
+      .header h1 { font-size: 24px; }
+      .highlight .big-number { font-size: 36px; }
     }
   </style>
 </head>
 <body>
   <div class='container'>
     <div class='header'>
-      <h1>⚡ MUST Inverter API</h1>
-      <p>Monitoramento via RS485/Modbus RTU</p>
-    </div>
-    <div class='content'>
-      <div class='section'>
-        <h2>Status do Dispositivo</h2>
-        <div class='info-box'>
-          <label>Nome do Dispositivo</label>
-          <div class='value'>)");
-  
-  html += String(DEVICE_NAME);
-  html += F(R"(</div>
-        </div>
-        <div class='info-box'>
-          <label>Endereço IP</label>
-          <div class='value'>)");
+      <h1>⚡ MUST Inverter Monitor</h1>
+      <p>Monitoramento em Tempo Real - IP: )");
   
   html += WiFi.localIP().toString();
-  html += F(R"(</div>
+  html += F(R"(</p>
+      <span class='status' id='updateStatus'>🔄 Carregando...</span>
+    </div>
+    
+    <div class='grid'>
+      <!-- Battery Card -->
+      <div class='card'>
+        <div class='card-header'>
+          <span class='icon'>🔋</span>
+          <h2>Bateria</h2>
         </div>
-        <div class='info-box'>
-          <label>Estado Wi-Fi</label>
-          <div class='value'><span class='status online'>● CONECTADO</span></div>
+        <div class='highlight'>
+          <div class='big-number' id='battery_soc'>--</div>
+          <div class='label'>Estado de Carga (%)</div>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Tensão</span>
+          <span class='metric-value' id='battery_voltage'>--<span class='metric-unit'>V</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Corrente</span>
+          <span class='metric-value' id='battery_current'>--<span class='metric-unit'>A</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Potência</span>
+          <span class='metric-value' id='battery_power'>--<span class='metric-unit'>W</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Temperatura</span>
+          <span class='metric-value' id='battery_temp'>--<span class='metric-unit'>°C</span></span>
         </div>
       </div>
-      
-      <div class='section'>
-        <h2>API REST Endpoints</h2>
-        <div class='api-endpoint'>
-          GET /api/sensors
+
+      <!-- Solar Panel Card -->
+      <div class='card'>
+        <div class='card-header'>
+          <span class='icon'>☀️</span>
+          <h2>Painel Solar</h2>
         </div>
-        <div class='api-endpoint'>
-          GET /api/status
+        <div class='highlight' style='background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);'>
+          <div class='big-number' id='pv_power'>--</div>
+          <div class='label'>Potência Total (W)</div>
         </div>
-        <p style='font-size: 13px; color: #666; margin-top: 10px;'>
-          <strong>Autenticação:</strong> HTTP Basic Auth<br>
-          <strong>Usuário:</strong> admin<br>
-          <strong>Senha:</strong> must2024
-        </p>
+        <div class='metric'>
+          <span class='metric-label'>Tensão PV</span>
+          <span class='metric-value' id='pv_voltage'>--<span class='metric-unit'>V</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Corrente PV</span>
+          <span class='metric-value' id='pv_current'>--<span class='metric-unit'>A</span></span>
+        </div>
       </div>
-      
-      <div class='section'>
-        <h2>Ações Rápidas</h2>
-        <a href='/api/sensors' class='btn' style='margin-right: 10px;'>📊 Ver Sensores</a>
-        <a href='/config' class='btn'>⚙️ Configurar WiFi</a>
+
+      <!-- Charger Card -->
+      <div class='card'>
+        <div class='card-header'>
+          <span class='icon'>⚡</span>
+          <h2>Carregador</h2>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Tensão</span>
+          <span class='metric-value' id='charger_voltage'>--<span class='metric-unit'>V</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Corrente</span>
+          <span class='metric-value' id='charger_current'>--<span class='metric-unit'>A</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Potência</span>
+          <span class='metric-value' id='charger_power'>--<span class='metric-unit'>W</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Energia Total</span>
+          <span class='metric-value' id='charger_accumulated'>--<span class='metric-unit'>kWh</span></span>
+        </div>
+      </div>
+
+      <!-- Inverter Card -->
+      <div class='card'>
+        <div class='card-header'>
+          <span class='icon'>🔌</span>
+          <h2>Inversor</h2>
+        </div>
+        <div style='text-align: center; margin-bottom: 15px;'>
+          <span class='mode-badge' id='inverter_mode'>--</span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Tensão AC</span>
+          <span class='metric-value' id='ac_voltage'>--<span class='metric-unit'>V</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Corrente AC</span>
+          <span class='metric-value' id='ac_current'>--<span class='metric-unit'>A</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Frequência</span>
+          <span class='metric-value' id='ac_frequency'>--<span class='metric-unit'>Hz</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Potência</span>
+          <span class='metric-value' id='ac_power'>--<span class='metric-unit'>W</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Carga</span>
+          <span class='metric-value' id='load_percent'>--<span class='metric-unit'>%</span></span>
+        </div>
+      </div>
+
+      <!-- Accumulated Energy Card -->
+      <div class='card'>
+        <div class='card-header'>
+          <span class='icon'>📊</span>
+          <h2>Energia Acumulada</h2>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Total Carregado</span>
+          <span class='metric-value' id='total_charged'>--<span class='metric-unit'>kWh</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Total Descarregado</span>
+          <span class='metric-value' id='total_discharged'>--<span class='metric-unit'>kWh</span></span>
+        </div>
+      </div>
+
+      <!-- System Info Card -->
+      <div class='card'>
+        <div class='card-header'>
+          <span class='icon'>💻</span>
+          <h2>Sistema</h2>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Temperatura Dispositivo</span>
+          <span class='metric-value' id='device_temp'>--<span class='metric-unit'>°C</span></span>
+        </div>
+        <div class='metric'>
+          <span class='metric-label'>Última Atualização</span>
+          <span class='metric-value' id='last_update' style='font-size: 14px;'>--</span>
+        </div>
+        <div class='actions'>
+          <a href='/api/sensors' class='btn' target='_blank'>📄 API JSON</a>
+          <a href='/config' class='btn btn-secondary'>⚙️ Config</a>
+        </div>
       </div>
     </div>
   </div>
+
+  <script>
+    function updateData() {
+      fetch('/api/sensors', {
+        headers: {
+          'Authorization': 'Basic ' + btoa('admin:admin123')
+        }
+      })
+      .then(response => response.json())
+      .then(data => {
+        // Battery
+        document.getElementById('battery_soc').textContent = data.battery.soc || '--';
+        document.getElementById('battery_voltage').innerHTML = (data.battery.voltage || '--') + '<span class="metric-unit">V</span>';
+        document.getElementById('battery_current').innerHTML = (data.battery.current || '--') + '<span class="metric-unit">A</span>';
+        document.getElementById('battery_power').innerHTML = (data.battery.power || '--') + '<span class="metric-unit">W</span>';
+        document.getElementById('battery_temp').innerHTML = (data.battery.temperature || '--') + '<span class="metric-unit">°C</span>';
+        
+        // Solar
+        document.getElementById('pv_power').textContent = data.pv.power || '--';
+        document.getElementById('pv_voltage').innerHTML = (data.pv.voltage || '--') + '<span class="metric-unit">V</span>';
+        document.getElementById('pv_current').innerHTML = (data.pv.current || '--') + '<span class="metric-unit">A</span>';
+        
+        // Charger
+        document.getElementById('charger_voltage').innerHTML = (data.charger.voltage || '--') + '<span class="metric-unit">V</span>';
+        document.getElementById('charger_current').innerHTML = (data.charger.current || '--') + '<span class="metric-unit">A</span>';
+        document.getElementById('charger_power').innerHTML = (data.charger.power || '--') + '<span class="metric-unit">W</span>';
+        document.getElementById('charger_accumulated').innerHTML = (data.charger.accumulated_power || '--') + '<span class="metric-unit">kWh</span>';
+        
+        // Inverter
+        document.getElementById('inverter_mode').textContent = data.inverter.mode || '--';
+        document.getElementById('ac_voltage').innerHTML = (data.inverter.ac_voltage || '--') + '<span class="metric-unit">V</span>';
+        document.getElementById('ac_current').innerHTML = (data.inverter.ac_current || '--') + '<span class="metric-unit">A</span>';
+        document.getElementById('ac_frequency').innerHTML = (data.inverter.ac_frequency || '--') + '<span class="metric-unit">Hz</span>';
+        document.getElementById('ac_power').innerHTML = (data.inverter.ac_power || '--') + '<span class="metric-unit">W</span>';
+        document.getElementById('load_percent').innerHTML = (data.inverter.load_percent || '--') + '<span class="metric-unit">%</span>';
+        
+        // Totals
+        document.getElementById('total_charged').innerHTML = (data.totals.total_charged || '--') + '<span class="metric-unit">kWh</span>';
+        document.getElementById('total_discharged').innerHTML = (data.totals.total_discharged || '--') + '<span class="metric-unit">kWh</span>';
+        
+        // System
+        document.getElementById('device_temp').innerHTML = (data.totals.device_temperature || '--') + '<span class="metric-unit">°C</span>';
+        
+        const now = new Date();
+        document.getElementById('last_update').textContent = now.toLocaleTimeString('pt-BR');
+        document.getElementById('updateStatus').textContent = '✓ Atualizado ' + now.toLocaleTimeString('pt-BR');
+      })
+      .catch(error => {
+        console.error('Erro ao atualizar dados:', error);
+        document.getElementById('updateStatus').textContent = '⚠️ Erro de conexão';
+      });
+    }
+    
+    // Update immediately and every 5 seconds
+    updateData();
+    setInterval(updateData, 5000);
+  </script>
 </body>
 </html>
   )");
