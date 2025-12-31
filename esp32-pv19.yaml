@@ -1,7 +1,7 @@
 substitutions:
-  device_name: "Your_device_name"
-  name: "Your_device_name"
-  device_location: "Your_device_location"
+  device_name: "must-inverter-pv19"
+  name: "must-inverter-pv19"
+  device_location: "Your location here"
   device_description: "Monitor MUST inverter via RS485"
   tx_pin: GPIO19
   rx_pin: GPIO18
@@ -14,7 +14,7 @@ esphome:
 esp32:
   board: esp32dev
   framework:
-    type: esp-idf
+    type: arduino
 
 logger:
 
