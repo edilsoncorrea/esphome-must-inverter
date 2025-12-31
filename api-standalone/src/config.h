@@ -58,6 +58,12 @@
 #define PREFS_KEY_WIFI_CONFIGURED "wifi_cfg"
 
 // ============================================
+// Demo Mode Configuration
+// ============================================
+#define DEMO_MODE_ENABLED true  // Enable demo mode when inverter not connected
+#define DEMO_DETECTION_FAILED_READS 3  // Number of failed reads before activating demo
+
+// ============================================
 // LED Configuration (optional)
 // ============================================
 #define LED_BUILTIN 2

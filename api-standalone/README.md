@@ -12,6 +12,9 @@ Este é um **firmware completo em C++/Arduino** para ESP32 que monitora inversor
 - ✅ **LittleFS** - arquivos estáticos servidos do filesystem
 - ✅ **Factory Reset** via botão BOOT (5 segundos)
 - ✅ **OTA Updates** (via PlatformIO)
+- ✅ **Modo Demo** - Validação da API sem conexão com inversor
+
+**🔧 Modo de Demonstração**: Teste e valide a API mesmo sem o inversor conectado! O sistema detecta automaticamente quando não há comunicação Modbus e exibe dados simulados realistas. Perfeito para desenvolvimento e demonstrações. [Ver detalhes](DEMO_MODE.md)
 
 **Tecnologias:**
 - PlatformIO + Arduino Framework
@@ -222,30 +225,50 @@ curl -H "Authorization: Basic YWRtaW46YWRtaW4xMjM=" http://192.168.4.1/sensor/
 **Resposta JSON (exemplo):**
 ```json
 {
-  "state_of_charge": {"value": 85.0, "unit": "%"},
-  "pv1_voltage": {"value": 380.5, "unit": "V"},
-  "pv2_voltage": {"value": 375.2, "unit": "V"},
-  "pv1_current": {"value": 12.3, "unit": "A"},
-  "pv2_current": {"value": 11.8, "unit": "A"},
-  "pv1_power": {"value": 4681, "unit": "W"},
-  "pv2_power": {"value": 4428, "unit": "W"},
-  "battery_voltage_charger": {"value": 52.8, "unit": "V"},
-  "battery_voltage_inverter": {"value": 52.7, "unit": "V"},
-  "battery_current": {"value": 45.2, "unit": "A"},
-  "battery_power": {"value": 2385, "unit": "W"},
-  "inverter_voltage": {"value": 230.1, "unit": "V"},
-  "grid_voltage": {"value": 228.5, "unit": "V"},
-  "inverter_power": {"value": 1850, "unit": "W"},
-  "grid_power": {"value": -535, "unit": "W"},
-  "load_power": {"value": 1315, "unit": "W"},
-  "ac_radiator_temp": {"value": 45.2, "unit": "°C"},
-  "transformer_temp": {"value": 48.5, "unit": "°C"},
-  "accumulated_charger_power": {"value": 1543.2, "unit": "kWh"},
-  "accumulated_discharger_power": {"value": 987.5, "unit": "kWh"},
-  "accumulated_buy_power": {"value": 234.8, "unit": "kWh"},
-  "accumulated_sell_power": {"value": 156.3, "unit": "kWh"}
+  "charger": {
+    "voltage": 54.2,
+    "current": 8.2,
+    "power": 445,
+    "accumulated_power": 125.5
+  },
+  "pv": {
+    "voltage": 85.0,
+    "current": 4.5,
+    "power": 383
+  },
+  "battery": {
+    "voltage": 52.8,
+    "current": 8.0,
+    "power": 422,
+    "soc": 65,
+    "temperature": 25.0
+  },
+  "inverter": {
+    "mode": "Off-Grid",
+    "mode_id": 3,
+    "ac_voltage": 220.0,
+    "ac_current": 2.5,
+    "ac_frequency": 50.0,
+    "ac_power": 550,
+    "load_percent": 28,
+    "dc_voltage": 52.8,
+    "max_charge_current": 60,
+    "max_discharge_current": 60,
+    "accumulated_power": 87.6
+  },
+  "totals": {
+    "total_charged": 170.7,
+    "total_discharged": 185.9,
+    "device_temperature": 42.0
+  },
+  "last_update": 12345678,
+  "uptime": 1234,
+  "modbus_error": false,
+  "demo_mode": false
 }
 ```
+
+**🔧 Modo Demo**: Quando o campo `"demo_mode": true` estiver presente, os dados exibidos são simulados (inversor não conectado). [Ver detalhes sobre o modo demo](DEMO_MODE.md)
 
 #### Endpoints Individuais
 Cada sensor tem seu próprio endpoint:

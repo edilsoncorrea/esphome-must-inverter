@@ -76,6 +76,14 @@ async function updateData() {
         // Sistema
         document.getElementById('device-temp').textContent = data.totals.device_temperature.toFixed(1) + ' °C';
         
+        // Demo Mode Banner
+        const demoBanner = document.getElementById('demo-mode-banner');
+        if (data.demo_mode === true) {
+            demoBanner.style.display = 'block';
+        } else {
+            demoBanner.style.display = 'none';
+        }
+        
         // Timestamp
         const now = new Date();
         document.getElementById('timestamp').textContent = 

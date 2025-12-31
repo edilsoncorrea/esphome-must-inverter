@@ -57,9 +57,63 @@ struct SensorData {
   // Status
   unsigned long lastUpdate;
   bool modbusError;
+  bool demoMode;
+  int failedReadCount;
 };
 
 SensorData sensorData = {0};
+
+// ==================== DEMO MODE FUNCTIONS ====================
+void generateDemoData() {
+  Serial.println("Generating demo data - Inverter not connected");
+  
+  // Simulate realistic solar inverter values
+  unsigned long time = millis() / 1000;
+  float variance = sin(time / 30.0) * 0.1; // Slow variation
+  
+  // Solar PV - simulating partial sun
+  sensorData.pvVoltage = 85.0 + variance * 10.0;
+  sensorData.pvCurrent = 4.5 + variance * 2.0;
+  sensorData.pvPower = sensorData.pvVoltage * sensorData.pvCurrent;
+  
+  // Charger
+  sensorData.chargerVoltage = 54.2 + variance * 0.5;
+  sensorData.chargerCurrent = 8.2 + variance * 1.0;
+  sensorData.chargerPower = 445.0 + variance * 50.0;
+  
+  // Battery - simulating charging state
+  sensorData.batteryVoltage = 52.8 + variance * 0.3;
+  sensorData.batteryCurrent = 8.0 + variance * 1.5;
+  sensorData.batteryPower = 422.0 + variance * 40.0;
+  sensorData.batterySOC = 65.0 + variance * 5.0;
+  sensorData.batteryTemp = 25.0 + variance * 2.0;
+  
+  // Inverter - simulating off-grid mode with load
+  sensorData.inverterMode = 3; // Off-Grid
+  sensorData.acVoltage = 220.0 + variance * 2.0;
+  sensorData.acCurrent = 2.5 + variance * 0.5;
+  sensorData.acFrequency = 50.0 + variance * 0.1;
+  sensorData.acPower = 550.0 + variance * 50.0;
+  sensorData.loadPercent = 27.5 + variance * 5.0;
+  sensorData.dcVoltage = 52.8 + variance * 0.3;
+  sensorData.maxChargeCurrent = 60.0;
+  sensorData.maxDischargeCurrent = 60.0;
+  
+  // Temperatures
+  sensorData.deviceTemp = 42.0 + variance * 3.0;
+  
+  // Accumulated energy - simulating some usage history
+  sensorData.chargerAccumulatedPower = 125.5;
+  sensorData.dischargerAccumulatedPower = 98.3;
+  sensorData.acChargerAccumulatedPower = 45.2;
+  sensorData.acDischargerAccumulatedPower = 87.6;
+  sensorData.totalChargerPower = 170.7;
+  sensorData.totalDischargerPower = 185.9;
+  
+  sensorData.lastUpdate = millis();
+  sensorData.modbusError = true;
+  sensorData.demoMode = true;
+}
 
 // ==================== MODBUS FUNCTIONS ====================
 bool readModbusRegister(uint16_t address, uint16_t* value) {
@@ -96,6 +150,29 @@ int readModbusInt(uint16_t address) {
 
 void updateSensorData() {
   Serial.println("Reading Modbus sensors...");
+  
+  // Try to read first register to test connection
+  uint16_t testValue;
+  bool connectionOk = readModbusRegister(15201, &testValue);
+  
+  if (!connectionOk) {
+    sensorData.failedReadCount++;
+    Serial.printf("Modbus read failed (attempt %d/%d)\n", 
+                  sensorData.failedReadCount, DEMO_DETECTION_FAILED_READS);
+    
+    if (DEMO_MODE_ENABLED && sensorData.failedReadCount >= DEMO_DETECTION_FAILED_READS) {
+      // Switch to demo mode
+      generateDemoData();
+      return;
+    } else {
+      sensorData.modbusError = true;
+      return;
+    }
+  }
+  
+  // Connection successful - reset counters and disable demo mode
+  sensorData.failedReadCount = 0;
+  sensorData.demoMode = false;
   
   // Charger Stats (15201-15221)
   sensorData.chargerVoltage = readModbusFloat(15201, 0.1);      // V
@@ -245,6 +322,7 @@ void handleApiSensors(AsyncWebServerRequest *request) {
   doc["last_update"] = sensorData.lastUpdate;
   doc["uptime"] = millis() / 1000;
   doc["modbus_error"] = sensorData.modbusError;
+  doc["demo_mode"] = sensorData.demoMode;
   
   String response;
   serializeJsonPretty(doc, response);
