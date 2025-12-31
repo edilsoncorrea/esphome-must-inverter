@@ -2,13 +2,14 @@
 
 ## 🚀 Projeto PlatformIO Standalone
 
-Este é um **firmware completo em C++/Arduino** para ESP32 que monitora inversores MUST via RS485/Modbus e expõe uma **API REST** pública.
+Este é um **firmware completo em C++/Arduino** para ESP32 que monitora inversores MUST via RS485/Modbus e expõe uma **API REST** pública com **interface web moderna** usando arquivos separados (LittleFS).
 
 **Características:**
 - ✅ **WiFi Manager** com portal captivo para configuração fácil
 - ✅ **API REST** com autenticação HTTP Basic
 - ✅ **Leitura Modbus RTU** de todos os sensores do inversor
-- ✅ **Interface web** moderna e responsiva
+- ✅ **Interface web** moderna e responsiva com arquivos HTML/CSS/JS separados
+- ✅ **LittleFS** - arquivos estáticos servidos do filesystem
 - ✅ **Factory Reset** via botão BOOT (5 segundos)
 - ✅ **OTA Updates** (via PlatformIO)
 
@@ -18,6 +19,28 @@ Este é um **firmware completo em C++/Arduino** para ESP32 que monitora inversor
 - ModbusRTU (comunicação RS485)
 - WiFiManager (configuração WiFi via AP)
 - ArduinoJson (respostas JSON estruturadas)
+- LittleFS (filesystem para HTML/CSS/JS)
+
+---
+
+## 📂 Estrutura do Projeto
+
+```
+api-standalone/
+├── platformio.ini          # Configuração PlatformIO
+├── src/
+│   ├── main.cpp           # Código principal (C++)
+│   └── config.h           # Configurações centralizadas
+├── data/                  # Arquivos do filesystem (LittleFS)
+│   ├── index.html        # Dashboard de monitoramento
+│   ├── config.html       # Página de configuração (modo AP)
+│   ├── css/
+│   │   └── style.css     # Estilos CSS
+│   └── js/
+│       └── app.js        # Lógica JavaScript
+└── README.md
+
+```
 
 ---
 
@@ -62,7 +85,17 @@ cd api-standalone
 pio run
 ```
 
-### 2. Flash via USB
+### 2. Upload do Filesystem (IMPORTANTE!)
+Antes de fazer o upload do firmware, você precisa fazer upload dos arquivos HTML/CSS/JS:
+
+```bash
+# Upload dos arquivos da pasta data/ para o LittleFS
+pio run --target uploadfs
+```
+
+**Nota**: Este comando irá fazer upload de todos os arquivos em `data/` para o filesystem do ESP32.
+
+### 3. Flash via USB
 ```bash
 # Conectar ESP32 via USB
 pio run --target upload
@@ -72,14 +105,14 @@ pio run --target upload --upload-port COM3  # Windows
 pio run --target upload --upload-port /dev/ttyUSB0  # Linux
 ```
 
-### 3. Monitorar Serial
+### 4. Monitorar Serial
 ```bash
 pio device monitor
 # Ou com taxa específica
 pio device monitor -b 115200
 ```
 
-### 4. OTA Updates (após primeira instalação)
+### 5. OTA Updates (após primeira instalação)
 ```bash
 # Editar platformio.ini e adicionar:
 # upload_protocol = espota
@@ -398,50 +431,102 @@ axios.get(`http://${deviceIP}/sensor/`, { auth })
 ### curl (Linux/Mac/Windows)
 ```bash
 # GET all data
-curl -u admin:admin123 http://192.168.4.1/sensor/
+curl -u admin:must2024 http://192.168.4.1/api/sensors
 
-# GET específico
-curl -u admin:admin123 http://192.168.4.1/sensor/battery_voltage_inverter
+# Status do dispositivo
+curl -u admin:must2024 http://192.168.4.1/api/status
 
 # Pretty print JSON
-curl -u admin:admin123 http://192.168.4.1/sensor/ | jq .
+curl -u admin:must2024 http://192.168.4.1/api/sensors | jq .
 ```
 
-## Configurações Importantes
+---
+
+## 🎨 Personalização da Interface Web
+
+### Estrutura dos Arquivos
+
+Os arquivos da interface estão organizados na pasta `data/`:
+
+```
+data/
+├── index.html     # Dashboard principal (quando WiFi conectado)
+├── config.html    # Página de configuração (modo AP)
+├── css/
+│   └── style.css  # Todos os estilos
+└── js/
+    └── app.js     # Lógica JavaScript e atualização de dados
+```
+
+### Como Modificar a Interface
+
+1. **Editar os arquivos**:
+   - `index.html` - Estrutura do dashboard
+   - `css/style.css` - Cores, fontes, layout
+   - `js/app.js` - Lógica de atualização, formato dos dados
+
+2. **Upload para o ESP32**:
+```bash
+# Fazer upload do filesystem atualizado
+pio run --target uploadfs
+```
+
+3. **Não é necessário recompilar o firmware!**
+   - Os arquivos HTML/CSS/JS são servidos diretamente do LittleFS
+   - Apenas execute `uploadfs` novamente após modificações
+
+### Exemplos de Personalização
+
+#### Mudar Cores do Dashboard
+Edite `data/css/style.css`:
+```css
+body {
+    background: linear-gradient(135deg, #your-color1 0%, #your-color2 100%);
+}
+
+.card {
+    background: #your-card-color;
+}
+```
+
+#### Adicionar Novo Card
+1. Edite `data/index.html` - adicione novo card HTML
+2. Edite `data/js/app.js` - adicione lógica para popular dados
+3. Execute: `pio run --target uploadfs`
+
+#### Alterar Intervalo de Atualização
+Edite `data/js/app.js`:
+```javascript
+// Mudar de 5000ms (5s) para outro valor
+setInterval(updateData, 10000);  // 10 segundos
+```
+
+---
+
+## ⚙️ Configurações Importantes
 
 ### Alterar Credenciais API Padrão
-Edite no arquivo YAML:
-```yaml
-globals:
-  - id: api_username
-    initial_value: '"seu_usuario"'  # Altere aqui
-  
-  - id: api_password
-    initial_value: '"sua_senha"'     # Altere aqui
+Edite em `src/config.h`:
+```cpp
+#define DEFAULT_API_USER "seu_usuario"
+#define DEFAULT_API_PASS "sua_senha"
 ```
 
 ### Alterar Senha do AP
-```yaml
-wifi:
-  ap:
-    password: "sua_senha_ap"  # Altere aqui
-```
-
-### Alterar IP do AP
-```yaml
-wifi:
-  ap:
-    manual_ip:
-      static_ip: 192.168.10.1  # Altere aqui
+Edite em `src/config.h`:
+```cpp
+#define AP_PASSWORD "sua_senha_ap"
 ```
 
 ### Alterar Intervalo de Atualização Modbus
-```yaml
-modbus_controller:
-  update_interval: 10s  # Altere aqui (padrão: 20s)
+Edite em `src/main.cpp`:
+```cpp
+const unsigned long MODBUS_UPDATE_INTERVAL = 10000;  // 10 segundos
 ```
 
-## Segurança
+---
+
+## 🔒 Segurança
 
 ⚠️ **IMPORTANTE:**
 1. **Altere as senhas padrão** antes de usar em produção
@@ -451,11 +536,23 @@ modbus_controller:
    - Usar tokens de API
    - Firewall para restringir acesso
 
-## Troubleshooting
+---
+
+## 🛠️ Troubleshooting
 
 ### Dispositivo não entra em modo AP
 - Aguarde 1 minuto após ligar
 - Verifique se não há redes WiFi configuradas
+
+### Interface web não carrega
+- Verifique se fez upload do filesystem: `pio run --target uploadfs`
+- Monitore serial para ver se LittleFS montou corretamente
+- Procure por mensagem: `✓ LittleFS mounted`
+
+### Erro "LittleFS mount failed"
+- Execute: `pio run --target uploadfs`
+- Se persistir, tente apagar flash: `pio run --target erase`
+- Depois: `pio run --target uploadfs` e `pio run --target upload`
 - Pressione o botão Boot por 5 segundos para forçar reset
 
 ### API não responde

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MUST PV19 Monitor</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚡ Monitor MUST PV19</h1>
+            <p>Monitoramento em Tempo Real</p>
+        </div>
+
+        <div class="grid">
+            <!-- Card Bateria -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔋</div>
+                    <div class="card-title">Bateria</div>
+                </div>
+                <div class="card-content">
+                    <div class="main-value" id="battery-soc">--</div>
+                    <div class="metric">
+                        <span class="metric-label">Tensão</span>
+                        <span class="metric-value" id="battery-voltage">-- V</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Corrente</span>
+                        <span class="metric-value" id="battery-current">-- A</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Potência</span>
+                        <span class="metric-value" id="battery-power">-- W</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Temperatura</span>
+                        <span class="metric-value" id="battery-temp">-- °C</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Solar -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">☀️</div>
+                    <div class="card-title">Painel Solar</div>
+                </div>
+                <div class="card-content">
+                    <div class="main-value" id="solar-power">--</div>
+                    <div class="metric">
+                        <span class="metric-label">Tensão</span>
+                        <span class="metric-value" id="solar-voltage">-- V</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Corrente</span>
+                        <span class="metric-value" id="solar-current">-- A</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Carregador -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">⚡</div>
+                    <div class="card-title">Carregador</div>
+                </div>
+                <div class="card-content">
+                    <div class="metric">
+                        <span class="metric-label">Tensão Fonte</span>
+                        <span class="metric-value" id="charger-voltage">-- V</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Corrente</span>
+                        <span class="metric-value" id="charger-current">-- A</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Potência</span>
+                        <span class="metric-value" id="charger-power">-- W</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Acumulado</span>
+                        <span class="metric-value" id="charger-accumulated">-- kWh</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Inversor -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔌</div>
+                    <div class="card-title">Inversor AC</div>
+                </div>
+                <div class="card-content">
+                    <div class="status-badge status-offline" id="inverter-mode">--</div>
+                    <div class="metric">
+                        <span class="metric-label">Tensão AC</span>
+                        <span class="metric-value" id="ac-voltage">-- V</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Corrente AC</span>
+                        <span class="metric-value" id="ac-current">-- A</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Frequência</span>
+                        <span class="metric-value" id="ac-frequency">-- Hz</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Potência</span>
+                        <span class="metric-value" id="ac-power">-- W</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Carga</span>
+                        <span class="metric-value" id="load-percent">--%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Energia -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">📊</div>
+                    <div class="card-title">Energia Total</div>
+                </div>
+                <div class="card-content">
+                    <div class="metric">
+                        <span class="metric-label">Total Carregado</span>
+                        <span class="metric-value" id="total-charged">-- kWh</span>
+                    </div>
+                    <div class="metric">
+                        <span class="metric-label">Total Descarregado</span>
+                        <span class="metric-value" id="total-discharged">-- kWh</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Card Sistema -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">💻</div>
+                    <div class="card-title">Sistema</div>
+                </div>
+                <div class="card-content">
+                    <div class="metric">
+                        <span class="metric-label">Temp. Dispositivo</span>
+                        <span class="metric-value" id="device-temp">-- °C</span>
+                    </div>
+                    <div class="button-group">
+                        <a href="/api/status" class="btn btn-info">Status JSON</a>
+                        <button onclick="resetToAP()" class="btn btn-danger" id="reset-btn">Reset WiFi</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="timestamp" id="timestamp">Carregando...</div>
+    </div>
+
+    <script src="/js/app.js"></script>
+</body>
+</html>
