@@ -2,9 +2,11 @@
 
 ## 🚀 Projeto PlatformIO Standalone
 
-Este é um **firmware completo em C++/Arduino** para ESP32 que monitora inversores MUST via RS485/Modbus e expõe uma **API REST** pública com **interface web moderna** usando arquivos separados (LittleFS).
+Este é um **firmware completo em C++/Arduino** para **ESP32, ESP32-C3 e ESP32-S3** que monitora inversores MUST via RS485/Modbus e expõe uma **API REST** pública com **interface web moderna** usando arquivos separados (LittleFS).
 
 **Características:**
+- ✅ **Suporte multi-plataforma**: ESP32, ESP32-C3, ESP32-S3
+- ✅ **Configuração automática de pinos** por plataforma
 - ✅ **WiFi Manager** com portal captivo para configuração fácil
 - ✅ **API REST** com autenticação HTTP Basic
 - ✅ **Leitura Modbus RTU** de todos os sensores do inversor
@@ -13,6 +15,7 @@ Este é um **firmware completo em C++/Arduino** para ESP32 que monitora inversor
 - ✅ **Factory Reset** via botão BOOT (5 segundos)
 - ✅ **OTA Updates** (via PlatformIO)
 - ✅ **Modo Demo** - Validação da API sem conexão com inversor
+- ✅ **Atalhos VS Code** para compilação e upload rápidos
 
 **🔧 Modo de Demonstração**: Teste e valide a API mesmo sem o inversor conectado! O sistema detecta automaticamente quando não há comunicação Modbus e exibe dados simulados realistas. Perfeito para desenvolvimento e demonstrações. [Ver detalhes](DEMO_MODE.md)
 
@@ -49,20 +52,42 @@ api-standalone/
 
 ## 📋 Requisitos Hardware
 
-### ESP32 DevKit
+### Placas Suportadas
+
+#### ESP32 DevKit (Original)
 - **Placa**: ESP32 DevKit V1 (30 pinos)
 - **Flash**: 4MB mínimo
-- **RAM**: 520KB
+- **RAM**: 320KB
+- **Serial Modbus**: Serial2
+- **Pinos**: TX=GPIO19, RX=GPIO18
+
+#### ESP32-C3 DevKit
+- **Placa**: ESP32-C3-DevKitM-1
+- **Flash**: 4MB
+- **RAM**: 400KB
+- **Serial Modbus**: Serial1
+- **Pinos**: TX=GPIO21, RX=GPIO20
+- **LED interno**: GPIO8
+
+#### ESP32-S3 DevKit
+- **Placa**: ESP32-S3-DevKitC-1
+- **Flash**: 8MB
+- **RAM**: 320KB
+- **Serial Modbus**: Serial1
+- **Pinos**: TX=GPIO17, RX=GPIO18
+- **USB CDC**: Suportado
 
 ### Conversor RS485
 - **Modelo**: MAX485, MAX3485 ou similar
-- **Conexões**:
-  - `RO (Receiver Output)` → GPIO18 (RX)
-  - `DI (Driver Input)` → GPIO19 (TX)
-  - `DE/RE` → Pode ser conectado ao VCC (sempre enabled) ou GPIO controlado
+- **Conexões RS485** (varia por plataforma - ver tabela acima):
+  - `RO (Receiver Output)` → GPIO RX da plataforma
+  - `DI (Driver Input)` → GPIO TX da plataforma
+  - `DE/RE` → Pode ser conectado ao VCC (sempre enabled) ou GPIO controlado (ver seção Controle de Fluxo)
   - `VCC` → 3.3V ou 5V (conforme módulo)
   - `GND` → GND
   - `A/B` → Terminais RS485 do inversor MUST
+
+**Nota**: O firmware detecta automaticamente a plataforma e configura os pinos corretos.
 
 ### Inversor MUST
 - **Modelos suportados**: PV18, PV19
@@ -83,8 +108,25 @@ pip install platformio
 ```
 
 ### 1. Clonar e Compilar
+
+#### Compilar para ESP32 (padrão)
 ```bash
 cd api-standalone
+pio run -e esp32dev
+```
+
+#### Compilar para ESP32-C3
+```bash
+pio run -e esp32c3
+```
+
+#### Compilar para ESP32-S3
+```bash
+pio run -e esp32s3
+```
+
+#### Compilar todas as plataformas
+```bash
 pio run
 ```
 
@@ -99,14 +141,25 @@ pio run --target uploadfs
 **Nota**: Este comando irá fazer upload de todos os arquivos em `data/` para o filesystem do ESP32.
 
 ### 3. Flash via USB
-```bash
-# Conectar ESP32 via USB
-pio run --target upload
 
-# Ou especificar porta manualmente
-pio run --target upload --upload-port COM3  # Windows
-pio run --target upload --upload-port /dev/ttyUSB0  # Linux
+#### ESP32
+```bash
+pio run -e esp32dev -t upload
+# Ou com porta específica
+pio run -e esp32dev -t upload --upload-port COM3
 ```
+
+#### ESP32-C3
+```bash
+pio run -e esp32c3 -t upload
+```
+
+#### ESP32-S3
+```bash
+pio run -e esp32s3 -t upload
+```
+
+**Nota**: A porta é auto-detectada, mas pode ser especificada com `--upload-port`
 
 ### 4. Monitorar Serial
 ```bash
@@ -123,6 +176,36 @@ pio device monitor -b 115200
 
 pio run --target upload
 ```
+
+### 6. Atalhos VS Code 🎯
+
+Se você estiver usando VS Code, o projeto já vem configurado com atalhos de teclado:
+
+| **Atalho** | **Ação** |
+|-----------|----------|
+| `Ctrl+Alt+B` | Compilar (ESP32) |
+| `Ctrl+Alt+U` | Upload (ESP32) |
+| `Ctrl+Alt+C` | Limpar build |
+| `Ctrl+Alt+M` | Abrir monitor serial |
+| `Ctrl+Shift+B` | Build task padrão |
+
+#### Menu de Tasks (Ctrl+Shift+P → "Run Task")
+
+**Build por plataforma:**
+- PlatformIO: Build (ESP32)
+- PlatformIO: Build (ESP32-C3)
+- PlatformIO: Build (ESP32-S3)
+
+**Upload por plataforma:**
+- PlatformIO: Upload (ESP32)
+- PlatformIO: Upload (ESP32-C3)
+- PlatformIO: Upload (ESP32-S3)
+- PlatformIO: Upload All (Filesystem + Firmware)
+- PlatformIO: Upload Filesystem
+
+**Outros:**
+- PlatformIO: Clean
+- PlatformIO: Monitor
 
 ---
 
@@ -368,6 +451,16 @@ pio run --target upload --upload-port 192.168.4.1
 
 ## Diagrama de Conexão
 
+### Configuração de Pinos por Plataforma
+
+| **Plataforma** | **Serial** | **TX (Modbus)** | **RX (Modbus)** | **LED** |
+|---------------|-----------|----------------|----------------|----------|
+| ESP32         | Serial2   | GPIO19         | GPIO18         | GPIO2    |
+| ESP32-C3      | Serial1   | GPIO21         | GPIO20         | GPIO8    |
+| ESP32-S3      | Serial1   | GPIO17         | GPIO18         | GPIO2    |
+
+### Exemplo: ESP32 DevKit
+
 ```
 ┌─────────────────────────────────────────┐
 │           ESP32 DevKit                  │
@@ -382,11 +475,26 @@ pio run --target upload --upload-port 192.168.4.1
                      │ RS485 (A/B)
                      ▼
 ┌─────────────────────────────────────────┐
-│      Inversor MUST PV19                 │
+│      Inversor MUST PV18/PV19            │
 │         Porta RS485                     │
 │          A  B  GND                      │
 └─────────────────────────────────────────┘
 ```
+
+**Nota**: Para ESP32-C3 e ESP32-S3, use os pinos indicados na tabela acima.
+
+### Controle de Fluxo RS485 (Opcional)
+
+O firmware suporta controle DE/RE (Driver Enable / Receiver Enable) para módulos RS485.
+Para habilitar, edite `src/config.h` e descomente as linhas correspondentes:
+
+```cpp
+// Exemplo para ESP32
+#define MODBUS_DE_PIN 4
+#define MODBUS_RE_PIN 4
+```
+
+Quando habilitado, o firmware controla automaticamente a direção da comunicação RS485.
 
 ## Exemplos de Uso da API
 
@@ -563,7 +671,74 @@ const unsigned long MODBUS_UPDATE_INTERVAL = 10000;  // 10 segundos
 
 ## 🛠️ Troubleshooting
 
+### Erro de compilação
+- Certifique-se de estar na pasta `api-standalone`
+- Execute `pio run` para instalar dependências
+- Se houver erros de plataforma, especifique: `pio run -e esp32dev` ou `-e esp32c3` ou `-e esp32s3`
+
 ### Dispositivo não entra em modo AP
+- Verifique se o LED está piscando
+- Aguarde 30 segundos após ligar
+- Pressione BOOT por 5 segundos para reset de fábrica
+- Verifique se há redes WiFi salvas conflitantes
+
+### Interface web não carrega
+- Certifique-se de ter feito upload do filesystem: `pio run --target uploadfs`
+- Acesse o IP correto (verifique no Serial Monitor)
+- Limpe o cache do navegador
+- Tente acessar `http://<IP>/` diretamente
+
+### Erro "LittleFS mount failed"
+- Faça upload do filesystem: `pio run --target uploadfs`
+- O ESP32 precisa de partição configurada (já está no platformio.ini)
+- Reformate o LittleFS se necessário
+
+### API não responde
+- Verifique se está usando as credenciais corretas
+- Confirme o IP correto (veja na interface web)
+- Teste sem autenticação: `http://<IP>/` (página web)
+
+### Não consegue conectar ao RS485
+- **Verifique a plataforma e pinos corretos** (ver tabela de pinos)
+- Confirme conexões A/B/GND
+- Tente inverter A e B
+- Confirme baudrate 19200 no inversor
+- ESP32: GPIO19/GPIO18
+- ESP32-C3: GPIO21/GPIO20
+- ESP32-S3: GPIO17/GPIO18
+
+### Valores zerados ou NaN
+- Aguarde 20-30 segundos após boot
+- Verifique comunicação Modbus nos logs
+- Confirme que inversor está ligado
+- Ative o [Modo Demo](DEMO_MODE.md) para testar sem inversor
+
+### Problema com upload
+- Segure o botão BOOT durante upload se necessário
+- Verifique se a porta COM está correta
+- No ESP32-C3/S3, pode ser necessário instalar drivers USB adicionais
+- Tente `pio run -e <plataforma> -t upload --upload-port COM<X>`
+
+---
+
+## 📝 Changelog
+
+### Versão 1.1.0 (Janeiro 2026)
+- ✨ **Suporte multi-plataforma**: ESP32, ESP32-C3, ESP32-S3
+- ✨ **Configuração automática de pinos** por plataforma
+- ✨ **Atalhos VS Code** para compilação e upload rápidos
+- ✨ **Suporte opcional para controle DE/RE** (RS485 flow control)
+- 🔧 Detecção automática de plataforma no boot
+- 🔧 Logs melhorados com informação de pinos configurados
+- 📚 Documentação atualizada com exemplos multi-plataforma
+
+### Versão 1.0.0
+- 🎉 Release inicial
+- ✅ Suporte ESP32 original
+- ✅ Interface web moderna
+- ✅ API REST com autenticação
+- ✅ Modo Demo
+- ✅ WiFi Manager
 - Aguarde 1 minuto após ligar
 - Verifique se não há redes WiFi configuradas
 

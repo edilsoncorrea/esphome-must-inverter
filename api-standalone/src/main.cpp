@@ -411,10 +411,29 @@ void setup() {
   }
   
   // Initialize Modbus
-  Serial2.begin(19200, SERIAL_8N1, MODBUS_RX_PIN, MODBUS_TX_PIN);
-  modbus.begin(&Serial2);
+  MODBUS_SERIAL.begin(19200, SERIAL_8N1, MODBUS_RX_PIN, MODBUS_TX_PIN);
+  
+  #ifdef MODBUS_FLOW_CONTROL_ENABLED
+    // Configure DE/RE pins for RS485 flow control
+    pinMode(MODBUS_DE_PIN, OUTPUT);
+    pinMode(MODBUS_RE_PIN, OUTPUT);
+    digitalWrite(MODBUS_DE_PIN, LOW);  // Disable transmit by default
+    digitalWrite(MODBUS_RE_PIN, LOW);  // Enable receive by default
+    Serial.printf("✓ RS485 flow control enabled (DE/RE: GPIO%d)\n", MODBUS_DE_PIN);
+  #endif
+  
+  modbus.begin(&MODBUS_SERIAL);
   modbus.master();
   Serial.println("✓ Modbus RTU initialized");
+  
+  #if defined(CONFIG_IDF_TARGET_ESP32C3)
+    Serial.println("  Platform: ESP32-C3");
+  #elif defined(CONFIG_IDF_TARGET_ESP32S3)
+    Serial.println("  Platform: ESP32-S3");
+  #else
+    Serial.println("  Platform: ESP32");
+  #endif
+  Serial.printf("  Pins: TX=%d, RX=%d\n", MODBUS_TX_PIN, MODBUS_RX_PIN);
   
   // Configure WiFiManager
   wifiManager.setAPCallback(configModeCallback);

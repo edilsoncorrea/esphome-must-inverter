@@ -30,12 +30,44 @@
 // ============================================
 // RS485/Modbus Configuration
 // ============================================
-#define MODBUS_TX_PIN 19
-#define MODBUS_RX_PIN 18
+// Pin configuration varies by ESP32 variant
+#if defined(CONFIG_IDF_TARGET_ESP32C3)
+  // ESP32-C3: Only has Serial and Serial1
+  #define MODBUS_SERIAL Serial1
+  #define MODBUS_TX_PIN 21
+  #define MODBUS_RX_PIN 20
+  // Optional: Control DE/RE pins for RS485 transceiver
+  // #define MODBUS_DE_PIN 10
+  // #define MODBUS_RE_PIN 10
+  
+#elif defined(CONFIG_IDF_TARGET_ESP32S3)
+  // ESP32-S3: Has Serial, Serial1, Serial2
+  #define MODBUS_SERIAL Serial1
+  #define MODBUS_TX_PIN 17
+  #define MODBUS_RX_PIN 18
+  // Optional: Control DE/RE pins for RS485 transceiver
+  // #define MODBUS_DE_PIN 16
+  // #define MODBUS_RE_PIN 16
+  
+#else
+  // ESP32 original: Has Serial, Serial1, Serial2
+  #define MODBUS_SERIAL Serial2
+  #define MODBUS_TX_PIN 19
+  #define MODBUS_RX_PIN 18
+  // Optional: Control DE/RE pins for RS485 transceiver
+  // #define MODBUS_DE_PIN 4
+  // #define MODBUS_RE_PIN 4
+#endif
+
 #define MODBUS_BAUD 19200
 #define MODBUS_SLAVE_ID 0x04
 #define MODBUS_TIMEOUT_MS 1000
 #define MODBUS_READ_INTERVAL_MS 20000  // 20 seconds
+
+// If DE/RE pins are defined, enable flow control
+#if defined(MODBUS_DE_PIN) && defined(MODBUS_RE_PIN)
+  #define MODBUS_FLOW_CONTROL_ENABLED
+#endif
 
 // ============================================
 // Reset Button Configuration
@@ -66,7 +98,16 @@
 // ============================================
 // LED Configuration (optional)
 // ============================================
-#define LED_BUILTIN 2
+#ifdef CONFIG_IDF_TARGET_ESP32C3
+  #ifdef LED_BUILTIN
+    #undef LED_BUILTIN
+  #endif
+  #define LED_BUILTIN 8  // ESP32-C3 built-in LED
+#else
+  #ifndef LED_BUILTIN
+    #define LED_BUILTIN 2
+  #endif
+#endif
 #define LED_BLINK_INTERVAL_MS 1000
 
 #endif // CONFIG_H
