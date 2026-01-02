@@ -247,16 +247,17 @@ app.get('/api/credentials', requireAuth, (req, res) => {
 });
 
 app.get('/api/wifi/scan', requireAuth, (req, res) => {
-    // Simular scan de redes WiFi
-    console.log('🔍 Simulando scan de redes WiFi...');
+    // Simular scan de redes WiFi (apenas 2.4 GHz - ESP32 não suporta 5 GHz)
+    console.log('🔍 Simulando scan de redes WiFi 2.4 GHz...');
     
     const simulatedNetworks = [
-        { ssid: 'CasteloAlto', rssi: -45, encryption: 'WPA2' },
-        { ssid: 'NET_2G_123456', rssi: -55, encryption: 'WPA2' },
-        { ssid: 'Vivo-Fibra', rssi: -65, encryption: 'WPA2' },
-        { ssid: 'Claro_WiFi', rssi: -72, encryption: 'WPA2' },
-        { ssid: 'TIM-FIBRA-5G', rssi: -78, encryption: 'WPA2' },
-        { ssid: 'WiFi-Guest', rssi: -85, encryption: 'Open' }
+        { ssid: 'CasteloAlto', rssi: -45, encryption: 'WPA2', channel: 6 },
+        { ssid: 'NET_2G_123456', rssi: -55, encryption: 'WPA2', channel: 11 },
+        { ssid: 'Vivo-Fibra-2.4G', rssi: -65, encryption: 'WPA2', channel: 1 },
+        { ssid: 'Claro_WiFi', rssi: -72, encryption: 'WPA2', channel: 3 },
+        { ssid: 'TIM-FIBRA-2.4G', rssi: -78, encryption: 'WPA2', channel: 9 },
+        { ssid: 'WiFi-Guest', rssi: -85, encryption: 'Open', channel: 7 }
+        // Nota: Redes 5 GHz são filtradas (ESP32 não suporta)
     ];
     
     // Ordenar por sinal (mais forte primeiro)
@@ -265,7 +266,8 @@ app.get('/api/wifi/scan', requireAuth, (req, res) => {
     res.json({
         success: true,
         networks: simulatedNetworks,
-        count: simulatedNetworks.length
+        count: simulatedNetworks.length,
+        note: 'Only 2.4 GHz networks (ESP32 compatible)'
     });
 });
 

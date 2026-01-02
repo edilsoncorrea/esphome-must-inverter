@@ -667,46 +667,57 @@ void setup() {
   server.on("/api/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *request) {
     if (!checkAuthentication(request)) return;
     
-    Serial.println("🔍 Scanning WiFi networks...");
+    Serial.println("🔍 Scanning WiFi networks (2.4 GHz only)...");
     
     // Fazer scan de redes
     int networksFound = WiFi.scanNetworks();
     
     JsonDocument doc;
     doc["success"] = true;
-    doc["count"] = networksFound;
     
     JsonArray networks = doc["networks"].to<JsonArray>();
+    int count24GHz = 0;
     
-    for (int i = 0; i < networksFound && i < 20; i++) {  // Limitar a 20 redes
-      JsonObject network = networks.add<JsonObject>();
-      network["ssid"] = WiFi.SSID(i);
-      network["rssi"] = WiFi.RSSI(i);
+    for (int i = 0; i < networksFound && count24GHz < 20; i++) {  // Limitar a 20 redes 2.4 GHz
+      int channel = WiFi.channel(i);
       
-      // Determinar tipo de encriptação
-      switch (WiFi.encryptionType(i)) {
-        case WIFI_AUTH_OPEN:
-          network["encryption"] = "Open";
-          break;
-        case WIFI_AUTH_WEP:
-          network["encryption"] = "WEP";
-          break;
-        case WIFI_AUTH_WPA_PSK:
-          network["encryption"] = "WPA";
-          break;
-        case WIFI_AUTH_WPA2_PSK:
-          network["encryption"] = "WPA2";
-          break;
-        case WIFI_AUTH_WPA_WPA2_PSK:
-          network["encryption"] = "WPA/WPA2";
-          break;
-        case WIFI_AUTH_WPA2_ENTERPRISE:
-          network["encryption"] = "WPA2-Enterprise";
-          break;
-        default:
-          network["encryption"] = "Unknown";
+      // Filtrar apenas redes 2.4 GHz (canais 1-14)
+      // ESP32 não suporta 5 GHz (canais > 14)
+      if (channel >= 1 && channel <= 14) {
+        JsonObject network = networks.add<JsonObject>();
+        network["ssid"] = WiFi.SSID(i);
+        network["rssi"] = WiFi.RSSI(i);
+        network["channel"] = channel;
+        
+        // Determinar tipo de encriptação
+        switch (WiFi.encryptionType(i)) {
+          case WIFI_AUTH_OPEN:
+            network["encryption"] = "Open";
+            break;
+          case WIFI_AUTH_WEP:
+            network["encryption"] = "WEP";
+            break;
+          case WIFI_AUTH_WPA_PSK:
+            network["encryption"] = "WPA";
+            break;
+          case WIFI_AUTH_WPA2_PSK:
+            network["encryption"] = "WPA2";
+            break;
+          case WIFI_AUTH_WPA_WPA2_PSK:
+            network["encryption"] = "WPA/WPA2";
+            break;
+          case WIFI_AUTH_WPA2_ENTERPRISE:
+            network["encryption"] = "WPA2-Enterprise";
+            break;
+          default:
+            network["encryption"] = "Unknown";
+        }
+        count24GHz++;
       }
     }
+    
+    doc["count"] = count24GHz;
+    doc["note"] = "Only 2.4 GHz networks (ESP32 compatible)";
     
     // Limpar scan
     WiFi.scanDelete();
@@ -714,7 +725,7 @@ void setup() {
     String response;
     serializeJson(doc, response);
     
-    Serial.printf("✓ Found %d networks\n", networksFound);
+    Serial.printf("✓ Found %d networks (2.4 GHz)\n", count24GHz);
     
     request->send(200, "application/json", response);
   });

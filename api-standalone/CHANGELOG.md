@@ -6,9 +6,11 @@
 
 #### Funcionalidades Adicionadas
 
-**1. Scan de Redes WiFi Disponíveis**
+**1. Scan de Redes WiFi Disponíveis (2.4 GHz)**
 - Botão "🔍 Procurar Redes WiFi" na página de configurações
 - Lista visual de redes disponíveis com força do sinal
+- **Filtro automático: apenas redes 2.4 GHz** (ESP32 não suporta 5 GHz)
+- Identificação por canal (1-14 = 2.4 GHz)
 - Suporte a datalist para autocompletar SSID
 - Ordenação automática por força do sinal (mais forte primeiro)
 - Indicadores visuais de qualidade do sinal:
@@ -29,8 +31,10 @@
 **ESP32 (Produção):**
 ```cpp
 // Escaneia redes WiFi reais usando WiFi.scanNetworks()
-// Retorna lista de SSIDs com RSSI e tipo de criptografia
-// Limita a 20 redes para não sobrecarregar a resposta
+// FILTRO: Apenas redes 2.4 GHz (canais 1-14)
+// ESP32 não suporta 5 GHz - redes 5 GHz são ignoradas
+// Retorna lista de SSIDs com RSSI, canal e tipo de criptografia
+// Limita a 20 redes 2.4 GHz para não sobrecarregar a resposta
 // Limpa scan automaticamente após retornar dados
 ```
 
@@ -45,15 +49,18 @@
 {
   "success": true,
   "count": 6,
+  "note": "Only 2.4 GHz networks (ESP32 compatible)",
   "networks": [
     {
       "ssid": "CasteloAlto",
       "rssi": -45,
+      "channel": 6,
       "encryption": "WPA2"
     },
     {
       "ssid": "NET_2G_123456",
       "rssi": -55,
+      "channel": 11,
       "encryption": "WPA2"
     }
   ]

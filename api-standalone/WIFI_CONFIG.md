@@ -66,6 +66,46 @@ O dispositivo irá:
    - Valida mas não aplica
    - Útil para testar a interface sem afetar o WiFi real
 
+## Scan de Redes WiFi
+
+### Endpoint: GET /api/wifi/scan
+
+Escaneia e lista todas as redes WiFi 2.4 GHz disponíveis.
+
+**⚠️ Importante**: O ESP32 suporta apenas WiFi 2.4 GHz (canais 1-14). Redes 5 GHz são automaticamente filtradas.
+
+**Requisição:**
+```bash
+curl -u admin:senha123 http://192.168.1.100/api/wifi/scan
+```
+
+**Resposta:**
+```json
+{
+  "success": true,
+  "count": 4,
+  "note": "Only 2.4 GHz networks (ESP32 compatible)",
+  "networks": [
+    {
+      "ssid": "MinhaRede",
+      "rssi": -45,
+      "channel": 6,
+      "encryption": "WPA2"
+    },
+    {
+      "ssid": "Vizinho-2.4G",
+      "rssi": -65,
+      "channel": 11,
+      "encryption": "WPA2"
+    }
+  ]
+}
+```
+
+**Canais WiFi:**
+- **2.4 GHz**: Canais 1-14 (suportado pelo ESP32)
+- **5 GHz**: Canais > 14 (NÃO suportado, filtrados automaticamente)
+
 ## Exemplo de Requisição API
 
 ```bash
