@@ -279,9 +279,9 @@
             const confirmPassword = document.getElementById('confirm-password').value;
             const submitBtn = document.getElementById('submit-btn');
             
-            // Validações
-            if (currentPassword !== API_PASS) {
-                showAlert('❌ Senha atual incorreta!', 'error');
+            // Validações básicas (a senha atual será validada pelo servidor)
+            if (!currentPassword) {
+                showAlert('❌ A senha atual é obrigatória!', 'error');
                 return;
             }
             
@@ -302,10 +302,10 @@
             
             // Desabilitar botão
             submitBtn.disabled = true;
-            submitBtn.textContent = '⏳ Salvando...';
+            submitBtn.innerHTML = '<span data-i18n="saving">⏳ Salvando...</span>';
             
             try {
-                // Não enviar credenciais - o navegador usa HTTP Basic Auth automaticamente
+                // Enviar para o servidor - a autenticação HTTP Basic Auth será usada automaticamente
                 const response = await fetch(`${API_BASE}/api/credentials`, {
                     method: 'POST',
                     headers: {
@@ -325,22 +325,22 @@
                     throw new Error(result.error || 'Erro desconhecido');
                 }
                 
-                showAlert('✅ Alterações salvas com sucesso! Você será redirecionado para fazer login novamente.', 'success');
+                // Mostrar mensagem de sucesso
+                showAlert('✅ ' + result.message + ' Aguarde o reinício...', 'success');
                 
                 // Limpar formulário
                 document.getElementById('credentials-form').reset();
                 
-                // Redirecionar após 3 segundos
+                // Aguardar 5 segundos (tempo para o servidor reiniciar) e redirecionar
                 setTimeout(() => {
-                    window.location.href = '/';
-                }, 3000);
+                    window.location.href = '/logout';
+                }, 5000);
                 
             } catch (error) {
                 console.error('Erro ao salvar:', error);
                 showAlert(`❌ ${error.message || 'Erro ao salvar alterações. Tente novamente.'}`, 'error');
-            } finally {
                 submitBtn.disabled = false;
-                submitBtn.textContent = '💾 Salvar Alterações';
+                submitBtn.innerHTML = '<span data-i18n="saveChanges">💾 Salvar Alterações</span>';
             }
         });
     </script>
