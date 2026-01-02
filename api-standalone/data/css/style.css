@@ -199,6 +199,16 @@ body {
     transform: scale(1.05);
 }
 
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+    transform: scale(1.05);
+}
+
 .loading {
     text-align: center;
     padding: 40px;

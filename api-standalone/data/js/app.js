@@ -1,14 +1,16 @@
 // Configuração da API
 const API_BASE = '';
-const API_USER = 'admin';
-const API_PASS = 'must2024';
 
-// Função auxiliar para criar headers de autenticação
-function getAuthHeaders() {
-    const credentials = btoa(`${API_USER}:${API_PASS}`);
-    return {
-        'Authorization': `Basic ${credentials}`
-    };
+// REMOVIDO: Não use credenciais hardcoded!
+// O navegador usará HTTP Basic Authentication automaticamente
+// após o usuário fazer login
+
+// Função auxiliar para fazer fetch (navegador adiciona auth automaticamente)
+function fetchAPI(url, options = {}) {
+    return fetch(url, {
+        ...options,
+        credentials: 'include'  // Inclui credenciais automaticamente
+    });
 }
 
 // Formatar modo do inversor
@@ -28,9 +30,7 @@ function formatInverterMode(mode) {
 // Atualizar dados do dashboard
 async function updateData() {
     try {
-        const response = await fetch(`${API_BASE}/api/sensors`, {
-            headers: getAuthHeaders()
-        });
+        const response = await fetchAPI(`${API_BASE}/api/sensors`);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -120,9 +120,8 @@ async function resetToAP() {
     }
     
     try {
-        const response = await fetch(`${API_BASE}/api/reset`, {
-            method: 'POST',
-            headers: getAuthHeaders()
+        const response = await fetchAPI(`${API_BASE}/api/reset`, {
+            method: 'POST'
         });
         
         if (response.ok) {

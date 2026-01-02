@@ -16,3 +16,8 @@
 # OS
 .DS_Store
 Thumbs.db
+# Dev Server credentials (não versionar senhas)
+credentials.json
+
+# Node modules
+node_modules/

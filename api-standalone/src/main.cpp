@@ -19,6 +19,10 @@ const int FACTORY_RESET_PIN = 0;  // GPIO0 (BOOT button)
 unsigned long resetButtonPressed = 0;
 bool resetInProgress = false;
 
+// Dynamic credentials (loaded from Preferences)
+String currentApiUser = DEFAULT_API_USER;
+String currentApiPass = DEFAULT_API_PASS;
+
 // ==================== SENSOR DATA STRUCTURE ====================
 struct SensorData {
   // Charger Stats (15201-15221)
@@ -251,7 +255,7 @@ String getInverterModeText(int mode) {
 }
 
 bool checkAuthentication(AsyncWebServerRequest *request) {
-  if (!request->authenticate(DEFAULT_API_USER, DEFAULT_API_PASS)) {
+  if (!request->authenticate(currentApiUser.c_str(), currentApiPass.c_str())) {
     request->requestAuthentication();
     return false;
   }
@@ -263,10 +267,11 @@ void handleRoot(AsyncWebServerRequest *request) {
   bool isConfigured = WiFi.status() == WL_CONNECTED && String(WiFi.SSID()) != String(AP_SSID);
   
   if (!isConfigured) {
-    // Serve configuration page when not connected
+    // Serve configuration page when not connected (no auth needed)
     request->send(LittleFS, "/config.html", "text/html");
   } else {
-    // Serve full monitoring dashboard when connected
+    // Require authentication for monitoring dashboard
+    if (!checkAuthentication(request)) return;
     request->send(LittleFS, "/index.html", "text/html");
   }
 }
@@ -348,6 +353,73 @@ void handleApiStatus(AsyncWebServerRequest *request) {
   request->send(200, "application/json", response);
 }
 
+void handleApiCredentials(AsyncWebServerRequest *request, uint8_t *data, size_t len, size_t index, size_t total) {
+  // Verificar autenticação
+  if (!checkAuthentication(request)) return;
+  
+  // Parse JSON body
+  JsonDocument doc;
+  DeserializationError error = deserializeJson(doc, data, len);
+  
+  if (error) {
+    request->send(400, "application/json", "{\"error\":\"Invalid JSON\"}");
+    return;
+  }
+  
+  // Extrair dados
+  const char* newUsername = doc["username"] | "";
+  const char* newPassword = doc["password"] | "";
+  const char* currentPassword = doc["current_password"] | "";
+  
+  // Validar senha atual
+  if (String(currentPassword) != currentApiPass) {
+    request->send(401, "application/json", "{\"error\":\"Current password is incorrect\"}");
+    Serial.println("❌ Credential change failed: incorrect current password");
+    return;
+  }
+  
+  // Validar se há algo para alterar
+  if (strlen(newUsername) == 0 && strlen(newPassword) == 0) {
+    request->send(400, "application/json", "{\"error\":\"No changes provided\"}");
+    return;
+  }
+  
+  // Validar tamanho da senha
+  if (strlen(newPassword) > 0 && strlen(newPassword) < 6) {
+    request->send(400, "application/json", "{\"error\":\"Password must be at least 6 characters\"}");
+    return;
+  }
+  
+  // Atualizar credenciais
+  String finalUsername = strlen(newUsername) > 0 ? String(newUsername) : currentApiUser;
+  String finalPassword = strlen(newPassword) > 0 ? String(newPassword) : currentApiPass;
+  
+  // Salvar no Preferences
+  prefs.begin("credentials", false);
+  prefs.putString("api_user", finalUsername);
+  prefs.putString("api_pass", finalPassword);
+  prefs.end();
+  
+  // Atualizar variáveis globais
+  currentApiUser = finalUsername;
+  currentApiPass = finalPassword;
+  
+  Serial.println("✅ Credentials updated successfully:");
+  Serial.printf("   Username: %s\n", finalUsername.c_str());
+  Serial.println("   Password: ***");
+  
+  // Responder com sucesso
+  JsonDocument responseDoc;
+  responseDoc["success"] = true;
+  responseDoc["message"] = "Credentials updated successfully";
+  responseDoc["username"] = finalUsername;
+  
+  String response;
+  serializeJson(responseDoc, response);
+  
+  request->send(200, "application/json", response);
+}
+
 void handleNotFound(AsyncWebServerRequest *request) {
   request->send(404, "text/plain", "404: Not Found");
 }
@@ -401,6 +473,16 @@ void setup() {
   
   // Configure factory reset button
   pinMode(FACTORY_RESET_PIN, INPUT_PULLUP);
+  
+  // Load saved credentials from Preferences
+  prefs.begin("credentials", true);  // Read-only mode
+  currentApiUser = prefs.getString("api_user", DEFAULT_API_USER);
+  currentApiPass = prefs.getString("api_pass", DEFAULT_API_PASS);
+  prefs.end();
+  
+  Serial.println("✓ Credentials loaded:");
+  Serial.printf("   Username: %s\n", currentApiUser.c_str());
+  Serial.println("   Password: ***");
   
   // Initialize LittleFS
   if (!LittleFS.begin(true)) {
@@ -473,8 +555,25 @@ void setup() {
   
   // Setup web server routes
   server.on("/", HTTP_GET, handleRoot);
+  
+  // Settings page (requires authentication)
+  server.on("/settings.html", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!checkAuthentication(request)) return;
+    request->send(LittleFS, "/settings.html", "text/html");
+  });
+  
   server.on("/api/sensors", HTTP_GET, handleApiSensors);
   server.on("/api/status", HTTP_GET, handleApiStatus);
+  
+  // Credentials endpoint (POST with JSON body)
+  server.on("/api/credentials", HTTP_POST, 
+    [](AsyncWebServerRequest *request) {
+      // This is called after body is received
+      request->send(200);
+    },
+    NULL,
+    handleApiCredentials  // Body handler
+  );
   
   // Serve static files (CSS, JS)
   server.serveStatic("/css", LittleFS, "/css/");
