@@ -306,7 +306,7 @@
                             name="wifi-password" 
                             minlength="8"
                             autocomplete="off">
-                        <button type="button" class="toggle-password" onclick="toggleWifiPasswordVisibility()" title="Mostrar/Ocultar senha">
+                        <button type="button" class="toggle-password" onclick="toggleWifiPasswordVisibility(event)" title="Mostrar/Ocultar senha">
                             👁️
                         </button>
                     </div>
@@ -430,9 +430,9 @@
         loadCurrentSettings();
 
         // Toggle WiFi password visibility
-        function toggleWifiPasswordVisibility() {
+        function toggleWifiPasswordVisibility(event) {
             const passwordInput = document.getElementById('wifi-password');
-            const toggleBtn = event.target;
+            const toggleBtn = event.currentTarget;
             
             if (passwordInput.type === 'password') {
                 passwordInput.type = 'text';
