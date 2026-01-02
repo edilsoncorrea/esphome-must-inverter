@@ -400,24 +400,30 @@ void handleApiCredentials(AsyncWebServerRequest *request, uint8_t *data, size_t 
   prefs.putString("api_pass", finalPassword);
   prefs.end();
   
-  // Atualizar variáveis globais
+  // Atualizar variáveis globais (temporário até o restart)
   currentApiUser = finalUsername;
   currentApiPass = finalPassword;
   
   Serial.println("✅ Credentials updated successfully:");
   Serial.printf("   Username: %s\n", finalUsername.c_str());
   Serial.println("   Password: ***");
+  Serial.println("🔄 Device will restart in 2 seconds to apply changes...");
   
   // Responder com sucesso
   JsonDocument responseDoc;
   responseDoc["success"] = true;
-  responseDoc["message"] = "Credentials updated successfully";
+  responseDoc["message"] = "Credentials updated successfully. Device will restart in 2 seconds.";
   responseDoc["username"] = finalUsername;
+  responseDoc["note"] = "ESP32 will restart to load new credentials from EEPROM";
   
   String response;
   serializeJson(responseDoc, response);
   
   request->send(200, "application/json", response);
+  
+  // Reiniciar ESP32 após 2 segundos
+  delay(2000);
+  ESP.restart();
 }
 
 void handleNotFound(AsyncWebServerRequest *request) {

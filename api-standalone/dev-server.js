@@ -267,16 +267,26 @@ app.post('/api/credentials', requireAuth, (req, res) => {
         
         const response = { 
             success: true, 
-            message: "Credentials updated successfully",
+            message: "Credentials updated successfully. Server will restart in 2 seconds.",
             username: finalUsername,
-            note: "Credenciais salvas em credentials.json"
+            note: "Dev-server will automatically restart to load new credentials"
         };
         
         if (warning) {
             response.warning = warning;
         }
         
+        console.log('✅ Credenciais alteradas com sucesso!');
+        console.log('🔄 Reiniciando servidor em 2 segundos...');
+        
+        // Enviar resposta e depois reiniciar o servidor
         res.json(response);
+        
+        // Aguardar 2 segundos e reiniciar o processo Node.js
+        setTimeout(() => {
+            console.log('\n🔄 Reiniciando dev-server...\n');
+            process.exit(0); // Exit code 0 indica sucesso
+        }, 2000);
     } else {
         res.status(500).json({
             error: "Failed to save credentials"

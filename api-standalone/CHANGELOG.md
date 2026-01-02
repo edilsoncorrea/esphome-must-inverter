@@ -1,5 +1,70 @@
 # Changelog - MUST Inverter API
 
+## [2026-01-02] - Auto-Restart após Mudança de Credenciais
+
+### 🔄 Reinício Automático
+
+#### Problema Corrigido
+Quando as credenciais eram alteradas via `/api/credentials`, o servidor/dispositivo continuava usando as credenciais antigas em memória, causando problemas de autenticação.
+
+#### Solução Implementada
+
+**Dev-Server (Node.js):**
+- Após alterar credenciais com sucesso, o servidor **reinicia automaticamente** em 2 segundos
+- `process.exit(0)` fecha o processo Node.js
+- Novo script: `dev-server-watch.ps1` que reinicia automaticamente o servidor quando ele para
+- Mensagem clara no response: "Server will restart in 2 seconds"
+
+**ESP32 (Produção):**
+- Após salvar credenciais nas Preferences, o dispositivo **reinicia automaticamente** em 2 segundos
+- `ESP.restart()` recarrega as credenciais do EEPROM
+- Mensagem clara no response: "Device will restart in 2 seconds"
+
+#### Arquivos Modificados
+
+**`dev-server.js`:**
+```javascript
+// Após salvar credenciais com sucesso
+setTimeout(() => {
+    console.log('\n🔄 Reiniciando dev-server...\n');
+    process.exit(0);
+}, 2000);
+```
+
+**`src/main.cpp`:**
+```cpp
+// Após salvar no Preferences
+delay(2000);
+ESP.restart();
+```
+
+**Novo arquivo: `dev-server-watch.ps1`**
+- Script PowerShell que monitora e reinicia o servidor automaticamente
+- Uso: `.\dev-server-watch.ps1`
+- Útil para desenvolvimento quando credenciais são alteradas frequentemente
+
+#### Como Usar
+
+**Desenvolvimento (com auto-restart):**
+```powershell
+cd api-standalone
+.\dev-server-watch.ps1
+```
+
+**Desenvolvimento (modo normal):**
+```powershell
+cd api-standalone
+node dev-server.js
+# Após alterar credenciais, o servidor para e você precisa reiniciar manualmente
+```
+
+**Produção (ESP32):**
+- Altere as credenciais via `/api/credentials`
+- O dispositivo reinicia automaticamente
+- Aguarde ~10 segundos para o ESP32 voltar online
+
+---
+
 ## [2026-01-02] - Internacionalização (i18n)
 
 ### 🌍 Suporte a Múltiplos Idiomas
