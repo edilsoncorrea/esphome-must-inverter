@@ -1,5 +1,55 @@
 # Changelog - MUST Inverter API
 
+## [2026-01-02] - Internacionalização (i18n)
+
+### 🌍 Suporte a Múltiplos Idiomas
+
+#### Novidades
+- **Sistema completo de internacionalização** com suporte para Inglês e Português (Brasil)
+  - Idioma padrão: **Inglês** (`en`)
+  - Idioma alternativo: **Português do Brasil** (`pt`)
+  - Seletor de idioma no cabeçalho de todas as páginas
+  - Persistência da preferência no localStorage do navegador
+
+#### Arquivos Modificados
+
+**Novo arquivo: `data/js/i18n.js`**
+- Sistema completo de traduções
+- Funções: `loadLanguage()`, `saveLanguage()`, `t()`, `applyTranslations()`, `changeLanguage()`
+- Traduções completas para todos os elementos da interface
+
+**Atualizado: `data/index.html`**
+- Atributo `lang` alterado de `pt-BR` para `en` (padrão)
+- Seletor de idioma adicionado ao cabeçalho
+- Atributos `data-i18n` em todos os elementos de texto
+- Tradução dinâmica de todos os cards (Bateria, Solar, Carregador, Inversor, Energia, Sistema)
+
+**Atualizado: `data/settings.html`**
+- Seletor de idioma adicionado ao cabeçalho
+- Atributos `data-i18n` em todos os labels, textos de ajuda e botões
+- Inicialização automática do i18n no carregamento da página
+
+**Atualizado: `data/js/app.js`**
+- Inicialização do sistema i18n no `DOMContentLoaded`
+- Carregamento automático do idioma salvo
+- Sincronização do seletor de idioma com o localStorage
+
+#### Cobertura de Traduções
+- ✅ Cabeçalho e títulos
+- ✅ Todos os cards do dashboard (6 cards)
+- ✅ Formulários e labels
+- ✅ Botões e links
+- ✅ Mensagens de status e alertas
+- ✅ Modos do inversor
+- ✅ Estados de carregamento
+
+#### Documentação
+- **Novo arquivo:** `data/I18N_README.md` com guia completo de uso
+- Instruções de como adicionar novas traduções
+- Exemplos de implementação
+
+---
+
 ## [2026-01-02] - Autenticação HTTP Basic Auth Aprimorada
 
 ### 🔐 Segurança e Autenticação

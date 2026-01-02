@@ -140,6 +140,16 @@ async function resetToAP() {
 
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', () => {
+    // Carregar idioma salvo ou usar padrão (inglês)
+    const savedLang = loadLanguage();
+    applyTranslations(savedLang);
+    
+    // Definir idioma selecionado no dropdown
+    const langSelector = document.getElementById('language-selector');
+    if (langSelector) {
+        langSelector.value = savedLang;
+    }
+    
     // Atualizar dados imediatamente
     updateData();
     

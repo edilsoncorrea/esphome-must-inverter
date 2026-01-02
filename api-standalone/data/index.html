@@ -1,18 +1,28 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MUST PV19 Monitor</title>
+    <title data-i18n="title">MUST PV19 Monitor</title>
     <link rel="stylesheet" href="/css/style.css">
+    <script src="/js/i18n.js"></script>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>⚡ Monitor MUST PV19</h1>
-            <p>Monitoramento em Tempo Real</p>
-            <div id="demo-mode-banner" style="display: none; background-color: #ff9800; color: white; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; font-weight: bold;">
-                🔧 MODO DEMONSTRAÇÃO - Inversor não conectado. Exibindo dados simulados para validação da API.
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h1>⚡ <span data-i18n="title">MUST PV19 Monitor</span></h1>
+                <div class="language-selector">
+                    <label for="language-selector" data-i18n="language">Language</label>
+                    <select id="language-selector" onchange="changeLanguage(this.value)">
+                        <option value="en">English</option>
+                        <option value="pt">Português (BR)</option>
+                    </select>
+                </div>
+            </div>
+            <p data-i18n="subtitle">Real-Time Monitoring</p>
+            <div id="demo-mode-banner" style="display: none; background-color: #ff9800; color: white; padding: 10px; border-radius: 5px; margin-top: 10px; text-align: center; font-weight: bold;" data-i18n="demoMode">
+                🔧 DEMO MODE - Inverter not connected. Displaying simulated data for API validation.
             </div>
         </div>
 
@@ -21,24 +31,24 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">🔋</div>
-                    <div class="card-title">Bateria</div>
+                    <div class="card-title" data-i18n="battery">Bateria</div>
                 </div>
                 <div class="card-content">
                     <div class="main-value" id="battery-soc">--</div>
                     <div class="metric">
-                        <span class="metric-label">Tensão</span>
+                        <span class="metric-label" data-i18n="voltage">Tensão</span>
                         <span class="metric-value" id="battery-voltage">-- V</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Corrente</span>
+                        <span class="metric-label" data-i18n="current">Corrente</span>
                         <span class="metric-value" id="battery-current">-- A</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Potência</span>
+                        <span class="metric-label" data-i18n="power">Potência</span>
                         <span class="metric-value" id="battery-power">-- W</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Temperatura</span>
+                        <span class="metric-label" data-i18n="temperature">Temperatura</span>
                         <span class="metric-value" id="battery-temp">-- °C</span>
                     </div>
                 </div>
@@ -48,16 +58,16 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">☀️</div>
-                    <div class="card-title">Painel Solar</div>
+                    <div class="card-title" data-i18n="solarPanel">Painel Solar</div>
                 </div>
                 <div class="card-content">
                     <div class="main-value" id="solar-power">--</div>
                     <div class="metric">
-                        <span class="metric-label">Tensão</span>
+                        <span class="metric-label" data-i18n="voltage">Tensão</span>
                         <span class="metric-value" id="solar-voltage">-- V</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Corrente</span>
+                        <span class="metric-label" data-i18n="current">Corrente</span>
                         <span class="metric-value" id="solar-current">-- A</span>
                     </div>
                 </div>
@@ -67,23 +77,23 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">⚡</div>
-                    <div class="card-title">Carregador</div>
+                    <div class="card-title" data-i18n="charger">Carregador</div>
                 </div>
                 <div class="card-content">
                     <div class="metric">
-                        <span class="metric-label">Tensão Fonte</span>
+                        <span class="metric-label" data-i18n="sourceVoltage">Tensão Fonte</span>
                         <span class="metric-value" id="charger-voltage">-- V</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Corrente</span>
+                        <span class="metric-label" data-i18n="current">Corrente</span>
                         <span class="metric-value" id="charger-current">-- A</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Potência</span>
+                        <span class="metric-label" data-i18n="power">Potência</span>
                         <span class="metric-value" id="charger-power">-- W</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Acumulado</span>
+                        <span class="metric-label" data-i18n="accumulated">Acumulado</span>
                         <span class="metric-value" id="charger-accumulated">-- kWh</span>
                     </div>
                 </div>
@@ -93,28 +103,28 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">🔌</div>
-                    <div class="card-title">Inversor AC</div>
+                    <div class="card-title" data-i18n="inverter">Inversor AC</div>
                 </div>
                 <div class="card-content">
                     <div class="status-badge status-offline" id="inverter-mode">--</div>
                     <div class="metric">
-                        <span class="metric-label">Tensão AC</span>
+                        <span class="metric-label" data-i18n="acVoltage">Tensão AC</span>
                         <span class="metric-value" id="ac-voltage">-- V</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Corrente AC</span>
+                        <span class="metric-label" data-i18n="acCurrent">Corrente AC</span>
                         <span class="metric-value" id="ac-current">-- A</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Frequência</span>
+                        <span class="metric-label" data-i18n="frequency">Frequência</span>
                         <span class="metric-value" id="ac-frequency">-- Hz</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Potência</span>
+                        <span class="metric-label" data-i18n="power">Potência</span>
                         <span class="metric-value" id="ac-power">-- W</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Carga</span>
+                        <span class="metric-label" data-i18n="load">Carga</span>
                         <span class="metric-value" id="load-percent">--%</span>
                     </div>
                 </div>
@@ -124,15 +134,15 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">📊</div>
-                    <div class="card-title">Energia Total</div>
+                    <div class="card-title" data-i18n="totalEnergy">Energia Total</div>
                 </div>
                 <div class="card-content">
                     <div class="metric">
-                        <span class="metric-label">Total Carregado</span>
+                        <span class="metric-label" data-i18n="totalCharged">Total Carregado</span>
                         <span class="metric-value" id="total-charged">-- kWh</span>
                     </div>
                     <div class="metric">
-                        <span class="metric-label">Total Descarregado</span>
+                        <span class="metric-label" data-i18n="totalDischarged">Total Descarregado</span>
                         <span class="metric-value" id="total-discharged">-- kWh</span>
                     </div>
                 </div>
@@ -142,23 +152,23 @@
             <div class="card">
                 <div class="card-header">
                     <div class="card-icon">💻</div>
-                    <div class="card-title">Sistema</div>
+                    <div class="card-title" data-i18n="system">Sistema</div>
                 </div>
                 <div class="card-content">
                     <div class="metric">
-                        <span class="metric-label">Temp. Dispositivo</span>
+                        <span class="metric-label" data-i18n="deviceTemp">Temp. Dispositivo</span>
                         <span class="metric-value" id="device-temp">-- °C</span>
                     </div>
                     <div class="button-group">
-                        <a href="/settings.html" class="btn btn-secondary">⚙️ Configurações</a>
-                        <a href="/api/status" class="btn btn-info">Status JSON</a>
-                        <button onclick="resetToAP()" class="btn btn-danger" id="reset-btn">Reset WiFi</button>
+                        <a href="/settings.html" class="btn btn-secondary"><span data-i18n="settings">⚙️ Configurações</span></a>
+                        <a href="/api/status" class="btn btn-info"><span data-i18n="statusJson">Status JSON</span></a>
+                        <button onclick="resetToAP()" class="btn btn-danger" id="reset-btn"><span data-i18n="resetWifi">Reset WiFi</span></button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div class="timestamp" id="timestamp">Carregando...</div>
+        <div class="timestamp" id="timestamp" data-i18n="loading">Carregando...</div>
     </div>
 
     <script src="/js/app.js"></script>

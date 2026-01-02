@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configurações - MUST PV19 Monitor</title>
+    <title data-i18n="settingsTitle">Configurações - MUST PV19 Monitor</title>
     <link rel="stylesheet" href="/css/style.css">
     <style>
         .settings-container {
@@ -128,8 +128,16 @@
 <body>
     <div class="settings-container">
         <div class="settings-card">
-            <h1>⚙️ Configurações</h1>
-            <p>Altere as credenciais de acesso à API</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                <h1><span data-i18n="settingsIcon">⚙️</span> <span data-i18n="settingsHeader">Configurações</span></h1>
+                <div class="language-selector">
+                    <select id="language-selector" onchange="changeLanguage(this.value)" style="padding: 8px; border-radius: 5px; border: 2px solid white; background: rgba(255,255,255,0.2); color: white; font-weight: bold;">
+                        <option value="en">English</option>
+                        <option value="pt">Português (BR)</option>
+                    </select>
+                </div>
+            </div>
+            <p data-i18n="settingsSubtitle">Altere as credenciais de acesso à API</p>
         </div>
 
         <div id="alert-container"></div>
@@ -137,29 +145,30 @@
         <div class="settings-form">
             <form id="credentials-form">
                 <div class="form-group">
-                    <label for="current-password">Senha Atual</label>
+                    <label for="current-password" data-i18n="currentPassword">Senha Atual</label>
                     <input 
                         type="password" 
                         id="current-password" 
                         name="current-password" 
                         required
                         autocomplete="current-password">
-                    <small>Digite sua senha atual para confirmar a alteração</small>
+                    <small data-i18n="currentPasswordHelp">Digite sua senha atual para confirmar a alteração</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="new-username">Novo Usuário (opcional)</label>
+                    <label for="new-username" data-i18n="newUsername">Novo Usuário (opcional)</label>
                     <input 
                         type="text" 
                         id="new-username" 
                         name="new-username" 
+                        data-i18n-placeholder="newUsernamePlaceholder"
                         placeholder="Deixe em branco para manter: admin"
                         autocomplete="username">
-                    <small>Deixe em branco para manter o usuário atual</small>
+                    <small data-i18n="newUsernameHelp">Deixe em branco para manter o usuário atual</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="new-password">Nova Senha</label>
+                    <label for="new-password" data-i18n="newPassword">Nova Senha</label>
                     <input 
                         type="password" 
                         id="new-password" 
@@ -169,11 +178,11 @@
                     <div class="password-strength">
                         <div class="password-strength-bar" id="strength-bar"></div>
                     </div>
-                    <small>Mínimo 6 caracteres. Deixe em branco para manter a senha atual.</small>
+                    <small data-i18n="newPasswordHelp">Mínimo 6 caracteres. Deixe em branco para manter a senha atual.</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="confirm-password">Confirmar Nova Senha</label>
+                    <label for="confirm-password" data-i18n="confirmPassword">Confirmar Nova Senha</label>
                     <input 
                         type="password" 
                         id="confirm-password" 
@@ -182,28 +191,42 @@
                 </div>
 
                 <button type="submit" class="btn-submit" id="submit-btn">
-                    💾 Salvar Alterações
+                    <span data-i18n="saveChanges">💾 Salvar Alterações</span>
                 </button>
             </form>
 
-            <a href="/" class="btn-back">← Voltar ao Dashboard</a>
+            <a href="/" class="btn-back"><span data-i18n="backToDashboard">← Voltar ao Dashboard</span></a>
 
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
-                <h3 style="color: #666; font-size: 14px; margin-bottom: 10px;">⚠️ Importante:</h3>
+                <h3 style="color: #666; font-size: 14px; margin-bottom: 10px;" data-i18n="importantTitle">⚠️ Importante:</h3>
                 <ul style="color: #666; font-size: 14px; line-height: 1.6;">
-                    <li>Guarde suas novas credenciais em local seguro</li>
-                    <li>Você precisará fazer login novamente após salvar</li>
-                    <li>No dev-server, as alterações não são persistidas</li>
+                    <li data-i18n="importantNote1">Guarde suas novas credenciais em local seguro</li>
+                    <li data-i18n="importantNote2">Você precisará fazer login novamente após salvar</li>
+                    <li data-i18n="importantNote3">No dev-server, as alterações não são persistidas</li>
                 </ul>
             </div>
         </div>
     </div>
 
+    <script src="/js/i18n.js"></script>
     <script>
         const API_BASE = '';
 
         // REMOVIDO: Credenciais não devem estar no código JavaScript
         // O navegador usará HTTP Basic Authentication automaticamente
+
+        // Inicializar i18n quando a página carregar
+        document.addEventListener('DOMContentLoaded', () => {
+            // Carregar idioma salvo ou usar padrão (inglês)
+            const savedLang = loadLanguage();
+            applyTranslations(savedLang);
+            
+            // Definir idioma selecionado no dropdown
+            const langSelector = document.getElementById('language-selector');
+            if (langSelector) {
+                langSelector.value = savedLang;
+            }
+        });
 
         // Verificar força da senha
         document.getElementById('new-password').addEventListener('input', function(e) {
