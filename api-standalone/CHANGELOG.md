@@ -1,5 +1,124 @@
 # Changelog - MUST Inverter API
 
+## [2026-01-02] - Melhorias na Interface de Configuração WiFi
+
+### 🎨 Interface Aprimorada
+
+#### Funcionalidades Adicionadas
+
+**1. Scan de Redes WiFi Disponíveis**
+- Botão "🔍 Procurar Redes WiFi" na página de configurações
+- Lista visual de redes disponíveis com força do sinal
+- Suporte a datalist para autocompletar SSID
+- Ordenação automática por força do sinal (mais forte primeiro)
+- Indicadores visuais de qualidade do sinal:
+  - 📶 Excelente (-50 dBm ou melhor)
+  - 📶 Muito Bom (-60 dBm)
+  - 📶 Bom (-70 dBm)
+  - 📶 Fraco (-80 dBm)
+  - 📶 Muito Fraco (abaixo de -80 dBm)
+
+**2. Toggle de Visibilidade de Senha**
+- Ícone de olho (👁️) para mostrar/ocultar senha WiFi
+- Toggle animado entre 👁️ (oculto) e 👁️‍🗨️ (visível)
+- Senha exibida com asteriscos por padrão
+- Funciona para o campo de senha WiFi
+
+**3. Novo Endpoint: GET /api/wifi/scan**
+
+**ESP32 (Produção):**
+```cpp
+// Escaneia redes WiFi reais usando WiFi.scanNetworks()
+// Retorna lista de SSIDs com RSSI e tipo de criptografia
+// Limita a 20 redes para não sobrecarregar a resposta
+// Limpa scan automaticamente após retornar dados
+```
+
+**Dev-Server (Desenvolvimento):**
+```javascript
+// Simula scan com 6 redes fictícias
+// Útil para testar interface sem ESP32
+```
+
+**Exemplo de resposta:**
+```json
+{
+  "success": true,
+  "count": 6,
+  "networks": [
+    {
+      "ssid": "CasteloAlto",
+      "rssi": -45,
+      "encryption": "WPA2"
+    },
+    {
+      "ssid": "NET_2G_123456",
+      "rssi": -55,
+      "encryption": "WPA2"
+    }
+  ]
+}
+```
+
+#### Arquivos Modificados
+
+**`data/settings.html`:**
+- CSS para botão de toggle de senha e lista de redes
+- Campo SSID com datalist para autocompletar
+- Botão "Procurar Redes WiFi"
+- Container para exibir redes encontradas
+- Wrapper para campo de senha com botão de toggle
+- Funções JavaScript:
+  - `toggleWifiPasswordVisibility()`: Alterna visibilidade da senha
+  - `scanWiFiNetworks()`: Chama API e exibe redes
+  - `selectWiFiNetwork(ssid)`: Seleciona rede da lista
+  - `getSignalStrength(rssi)`: Converte RSSI em texto legível
+
+**`dev-server.js`:**
+- GET /api/wifi/scan endpoint com dados simulados
+- 6 redes WiFi fictícias para testes
+- Ordenação por força do sinal
+
+**`src/main.cpp`:**
+- GET /api/wifi/scan endpoint real
+- Usa `WiFi.scanNetworks()` do ESP32
+- Retorna informações completas (SSID, RSSI, criptografia)
+- Suporte a todos os tipos de criptografia WiFi
+- Limpeza automática do scan
+
+**`data/js/i18n.js`:**
+- Traduções para botão de scan
+- Traduções para força do sinal
+- Traduções para estados de carregamento
+
+#### Como Usar
+
+1. Acesse `/settings.html`
+2. Clique em "🔍 Procurar Redes WiFi"
+3. Aguarde a lista de redes disponíveis
+4. Clique em uma rede para selecionar (preenche SSID automaticamente)
+5. Digite a senha
+6. Use o botão 👁️ para ver/ocultar a senha
+7. Salve as configurações
+
+#### Melhorias de UX
+
+- **Seleção Visual**: Redes selecionadas ficam destacadas em roxo
+- **Hover Effect**: Redes mudam de cor ao passar o mouse
+- **Scroll Automático**: Lista de redes com scroll quando há muitas
+- **Feedback de Carregamento**: Mensagem "Procurando..." enquanto escaneia
+- **Auto-focus**: Campo de senha recebe foco após selecionar rede
+- **Ordenação Inteligente**: Redes mais fortes aparecem primeiro
+
+#### Compatibilidade
+
+- ✅ ESP32: Scan real de redes WiFi
+- ✅ ESP32-C3: Totalmente compatível
+- ✅ ESP32-S3: Totalmente compatível
+- ✅ Dev-Server: Simulação com dados fictícios
+
+---
+
 ## [2026-01-02] - Configuração WiFi via Interface Web
 
 ### 📶 Nova Funcionalidade: WiFi Management

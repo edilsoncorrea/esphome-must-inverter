@@ -663,6 +663,62 @@ void setup() {
     request->send(200, "application/json", response);
   });
   
+  // WiFi scan endpoint (GET - escaneia redes disponíveis)
+  server.on("/api/wifi/scan", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!checkAuthentication(request)) return;
+    
+    Serial.println("🔍 Scanning WiFi networks...");
+    
+    // Fazer scan de redes
+    int networksFound = WiFi.scanNetworks();
+    
+    JsonDocument doc;
+    doc["success"] = true;
+    doc["count"] = networksFound;
+    
+    JsonArray networks = doc["networks"].to<JsonArray>();
+    
+    for (int i = 0; i < networksFound && i < 20; i++) {  // Limitar a 20 redes
+      JsonObject network = networks.add<JsonObject>();
+      network["ssid"] = WiFi.SSID(i);
+      network["rssi"] = WiFi.RSSI(i);
+      
+      // Determinar tipo de encriptação
+      switch (WiFi.encryptionType(i)) {
+        case WIFI_AUTH_OPEN:
+          network["encryption"] = "Open";
+          break;
+        case WIFI_AUTH_WEP:
+          network["encryption"] = "WEP";
+          break;
+        case WIFI_AUTH_WPA_PSK:
+          network["encryption"] = "WPA";
+          break;
+        case WIFI_AUTH_WPA2_PSK:
+          network["encryption"] = "WPA2";
+          break;
+        case WIFI_AUTH_WPA_WPA2_PSK:
+          network["encryption"] = "WPA/WPA2";
+          break;
+        case WIFI_AUTH_WPA2_ENTERPRISE:
+          network["encryption"] = "WPA2-Enterprise";
+          break;
+        default:
+          network["encryption"] = "Unknown";
+      }
+    }
+    
+    // Limpar scan
+    WiFi.scanDelete();
+    
+    String response;
+    serializeJson(doc, response);
+    
+    Serial.printf("✓ Found %d networks\n", networksFound);
+    
+    request->send(200, "application/json", response);
+  });
+  
   // Credentials endpoint (POST - altera credenciais)
   server.on("/api/credentials", HTTP_POST, 
     [](AsyncWebServerRequest *request) {

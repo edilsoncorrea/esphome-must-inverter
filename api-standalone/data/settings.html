@@ -123,6 +123,92 @@
         .strength-weak { background: #f44336; width: 33%; }
         .strength-medium { background: #ff9800; width: 66%; }
         .strength-strong { background: #4caf50; width: 100%; }
+        
+        /* WiFi password toggle */
+        .password-input-wrapper {
+            position: relative;
+        }
+        .password-input-wrapper input {
+            padding-right: 45px;
+        }
+        .toggle-password {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 20px;
+            color: #666;
+            transition: color 0.3s;
+        }
+        .toggle-password:hover {
+            color: #667eea;
+        }
+        
+        /* WiFi networks list */
+        .wifi-networks-container {
+            margin-top: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            background: #f9f9f9;
+        }
+        .wifi-network-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .wifi-network-item:last-child {
+            border-bottom: none;
+        }
+        .wifi-network-item:hover {
+            background: #e8f0fe;
+        }
+        .wifi-network-item.selected {
+            background: #667eea;
+            color: white;
+        }
+        .wifi-network-name {
+            font-weight: 600;
+        }
+        .wifi-network-signal {
+            font-size: 12px;
+            color: #666;
+        }
+        .wifi-network-item.selected .wifi-network-signal {
+            color: rgba(255,255,255,0.8);
+        }
+        .wifi-scan-button {
+            padding: 8px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 8px;
+            transition: background 0.3s;
+        }
+        .wifi-scan-button:hover {
+            background: #5568d3;
+        }
+        .wifi-scan-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .wifi-loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+        }
     </style>
 </head>
 <body>
@@ -200,19 +286,30 @@
                         type="text" 
                         id="wifi-ssid" 
                         name="wifi-ssid" 
+                        list="wifi-networks-list"
                         placeholder="Nome da rede WiFi"
                         autocomplete="off">
+                    <datalist id="wifi-networks-list"></datalist>
+                    <button type="button" class="wifi-scan-button" id="scan-wifi-btn" onclick="scanWiFiNetworks()">
+                        🔍 Procurar Redes WiFi
+                    </button>
+                    <div id="wifi-networks-container" style="display: none;"></div>
                     <small data-i18n="wifiSSIDHelp">Deixe em branco para manter a rede atual</small>
                 </div>
 
                 <div class="form-group">
                     <label for="wifi-password" data-i18n="wifiPassword">Senha do WiFi</label>
-                    <input 
-                        type="password" 
-                        id="wifi-password" 
-                        name="wifi-password" 
-                        minlength="8"
-                        autocomplete="off">
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="wifi-password" 
+                            name="wifi-password" 
+                            minlength="8"
+                            autocomplete="off">
+                        <button type="button" class="toggle-password" onclick="toggleWifiPasswordVisibility()" title="Mostrar/Ocultar senha">
+                            👁️
+                        </button>
+                    </div>
                     <small data-i18n="wifiPasswordHelp">Mínimo 8 caracteres. Deixe em branco para manter a senha atual.</small>
                 </div>
 
@@ -325,6 +422,98 @@
 
         // Carregar configurações ao iniciar
         loadCurrentSettings();
+
+        // Toggle WiFi password visibility
+        function toggleWifiPasswordVisibility() {
+            const passwordInput = document.getElementById('wifi-password');
+            const toggleBtn = event.target;
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = '👁️‍🗨️';
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+            }
+        }
+
+        // Scan WiFi networks
+        async function scanWiFiNetworks() {
+            const scanBtn = document.getElementById('scan-wifi-btn');
+            const container = document.getElementById('wifi-networks-container');
+            const datalist = document.getElementById('wifi-networks-list');
+            
+            scanBtn.disabled = true;
+            scanBtn.textContent = '⏳ Procurando...';
+            container.style.display = 'block';
+            container.innerHTML = '<div class="wifi-loading">Procurando redes WiFi disponíveis...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/wifi/scan`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    throw new Error('Erro ao buscar redes WiFi');
+                }
+                
+                const data = await response.json();
+                const networks = data.networks || [];
+                
+                if (networks.length === 0) {
+                    container.innerHTML = '<div class="wifi-loading">Nenhuma rede encontrada</div>';
+                } else {
+                    // Atualizar datalist
+                    datalist.innerHTML = '';
+                    networks.forEach(network => {
+                        const option = document.createElement('option');
+                        option.value = network.ssid;
+                        datalist.appendChild(option);
+                    });
+                    
+                    // Criar lista visual
+                    container.innerHTML = '<div class="wifi-networks-container">' +
+                        networks.map(network => `
+                            <div class="wifi-network-item" onclick="selectWiFiNetwork('${network.ssid.replace(/'/g, "\\'")}')"
+                                data-ssid="${network.ssid}">
+                                <span class="wifi-network-name">${network.ssid}</span>
+                                <span class="wifi-network-signal">${getSignalStrength(network.rssi)} (${network.rssi} dBm)</span>
+                            </div>
+                        `).join('') +
+                        '</div>';
+                }
+            } catch (error) {
+                console.error('Erro ao buscar redes WiFi:', error);
+                container.innerHTML = '<div class="wifi-loading">❌ Erro ao buscar redes WiFi</div>';
+            } finally {
+                scanBtn.disabled = false;
+                scanBtn.textContent = '🔍 Procurar Redes WiFi';
+            }
+        }
+
+        function getSignalStrength(rssi) {
+            if (rssi >= -50) return '📶 Excelente';
+            if (rssi >= -60) return '📶 Muito Bom';
+            if (rssi >= -70) return '📶 Bom';
+            if (rssi >= -80) return '📶 Fraco';
+            return '📶 Muito Fraco';
+        }
+
+        function selectWiFiNetwork(ssid) {
+            const wifiSSIDInput = document.getElementById('wifi-ssid');
+            wifiSSIDInput.value = ssid;
+            
+            // Highlight selected network
+            document.querySelectorAll('.wifi-network-item').forEach(item => {
+                item.classList.remove('selected');
+                if (item.dataset.ssid === ssid) {
+                    item.classList.add('selected');
+                }
+            });
+            
+            // Focus on password field
+            document.getElementById('wifi-password').focus();
+        }
 
         // Handler do formulário
         document.getElementById('credentials-form').addEventListener('submit', async function(e) {
