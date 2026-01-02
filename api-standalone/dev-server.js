@@ -242,7 +242,8 @@ app.get('/api/credentials', requireAuth, (req, res) => {
     // Retorna as credenciais atuais (sem a senha por segurança)
     res.json({
         username: API_USER,
-        wifi_ssid: WIFI_SSID || null
+        wifi_ssid: WIFI_SSID || null,
+        has_wifi_password: WIFI_PASSWORD && WIFI_PASSWORD.length > 0
     });
 });
 

@@ -650,12 +650,15 @@ void setup() {
     // Carregar WiFi SSID do Preferences se existir
     prefs.begin("wifi", true);
     String savedSSID = prefs.getString("ssid", "");
+    String savedPassword = prefs.getString("password", "");
     prefs.end();
     
     if (savedSSID.length() > 0) {
       doc["wifi_ssid"] = savedSSID;
+      doc["has_wifi_password"] = savedPassword.length() > 0;
     } else {
       doc["wifi_ssid"] = nullptr;
+      doc["has_wifi_password"] = false;
     }
     
     String response;

@@ -411,8 +411,14 @@
                     
                     // Preencher SSID se existir
                     const wifiSSIDInput = document.getElementById('wifi-ssid');
+                    const wifiPasswordInput = document.getElementById('wifi-password');
                     if (data.wifi_ssid) {
                         wifiSSIDInput.placeholder = data.wifi_ssid;
+                    }
+                    
+                    // Mostrar asteriscos no placeholder da senha se existe senha configurada
+                    if (data.has_wifi_password) {
+                        wifiPasswordInput.placeholder = '••••••••';
                     }
                 }
             } catch (error) {
