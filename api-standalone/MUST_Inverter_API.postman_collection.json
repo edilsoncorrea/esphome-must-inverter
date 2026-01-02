@@ -1,0 +1,443 @@
+{
+	"info": {
+		"_postman_id": "must-pv19-api-collection",
+		"name": "MUST Inverter API",
+		"description": "Coleção completa de endpoints da API do MUST PV19 Monitor.\n\n## Autenticação\nTodos os endpoints (exceto /logout e /test-auth.html) requerem **HTTP Basic Authentication**.\n\n**Credenciais padrão:**\n- Username: `admin`\n- Password: `G&n0101cori13`\n\n## Servidor de Desenvolvimento\n- URL Local: `http://localhost:5000`\n- Modo: Dados simulados (DEMO)\n\n## Endpoints Disponíveis\n- GET `/api/sensors` - Dados dos sensores em tempo real\n- GET `/api/status` - Status do dispositivo\n- POST `/api/reset` - Reset de configuração WiFi\n- POST `/api/credentials` - Alterar credenciais de acesso\n- GET `/logout` - Limpar cache de autenticação",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"auth": {
+		"type": "basic",
+		"basic": [
+			{
+				"key": "username",
+				"value": "admin",
+				"type": "string"
+			},
+			{
+				"key": "password",
+				"value": "G&n0101cori13",
+				"type": "string"
+			}
+		]
+	},
+	"item": [
+		{
+			"name": "Sensors",
+			"item": [
+				{
+					"name": "Get Sensor Data",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/api/sensors",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"sensors"
+							]
+						},
+						"description": "Retorna todos os dados dos sensores em tempo real:\n- Bateria (tensão, corrente, SOC, temperatura)\n- Painel Solar (tensão, corrente, potência)\n- Carregador (tensão, corrente, potência, acumulado)\n- Inversor AC (modo, tensão, corrente, frequência, potência)\n- Energia (total carregado/descarregado)\n- Sistema (temperatura do dispositivo)\n\n**Autenticação:** Requerida\n**Resposta:** JSON com todos os dados dos sensores"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/api/sensors",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"sensors"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"battery\": {\n    \"voltage\": 52.4,\n    \"current\": 12.5,\n    \"power\": 655,\n    \"soc\": 85,\n    \"temperature\": 28.5\n  },\n  \"pv\": {\n    \"voltage\": 85.2,\n    \"current\": 8.3,\n    \"power\": 707\n  },\n  \"charger\": {\n    \"voltage\": 220.5,\n    \"current\": 3.2,\n    \"power\": 705,\n    \"accumulated_kwh\": 125.8\n  },\n  \"inverter\": {\n    \"mode\": 2,\n    \"ac_voltage\": 220.3,\n    \"ac_current\": 2.8,\n    \"ac_frequency\": 60.0,\n    \"ac_power\": 616,\n    \"load_percent\": 45\n  },\n  \"energy\": {\n    \"total_charged_kwh\": 1250.5,\n    \"total_discharged_kwh\": 1100.2\n  },\n  \"device\": {\n    \"temperature\": 42.3\n  }\n}"
+						}
+					]
+				}
+			],
+			"description": "Endpoints relacionados a dados dos sensores"
+		},
+		{
+			"name": "Device Status",
+			"item": [
+				{
+					"name": "Get Device Status",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/api/status",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"status"
+							]
+						},
+						"description": "Retorna informações sobre o dispositivo:\n- Nome do dispositivo\n- Endereço IP e MAC\n- WiFi SSID e RSSI\n- Tempo de uptime\n- Memória livre (heap)\n- Status da conexão Modbus\n\n**Autenticação:** Requerida\n**Resposta:** JSON com informações do sistema"
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/api/status",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"status"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"device_name\": \"MUST Inverter API (Dev Server)\",\n  \"ip_address\": \"127.0.0.1\",\n  \"mac_address\": \"00:00:00:00:00:00\",\n  \"wifi_ssid\": \"Development\",\n  \"wifi_rssi\": -42,\n  \"uptime_seconds\": 3652,\n  \"free_heap\": 200000,\n  \"modbus_connected\": false\n}"
+						}
+					]
+				}
+			],
+			"description": "Endpoints de status e informações do dispositivo"
+		},
+		{
+			"name": "Configuration",
+			"item": [
+				{
+					"name": "Reset WiFi Configuration",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/reset",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"reset"
+							]
+						},
+						"description": "Reseta as configurações de WiFi do dispositivo.\nO dispositivo retorna ao modo AP (Access Point) para reconfiguração.\n\n**Autenticação:** Requerida\n**Método:** POST\n**Body:** JSON vazio `{}`\n\n⚠️ **Nota:** No dev-server, esta operação não tem efeito real."
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:5000/api/reset",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"reset"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"message\": \"Reset não disponível no dev server\"\n}"
+						}
+					]
+				},
+				{
+					"name": "Update Credentials",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"current_password\": \"G&n0101cori13\",\n  \"username\": \"admin\",\n  \"password\": \"NewSecurePass123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "http://localhost:5000/api/credentials",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"api",
+								"credentials"
+							]
+						},
+						"description": "Altera as credenciais de acesso à API.\n\n**Parâmetros obrigatórios:**\n- `current_password`: Senha atual (para validação)\n\n**Parâmetros opcionais:**\n- `username`: Novo nome de usuário (deixe em branco para manter)\n- `password`: Nova senha (deixe em branco para manter)\n\n**Validações:**\n- Senha atual deve estar correta\n- Nova senha deve ter no mínimo 6 caracteres\n- Pelo menos um campo (username ou password) deve ser alterado\n\n**Autenticação:** Requerida\n**Método:** POST\n\n⚠️ **Aviso:** Se usar o caractere `&` na senha, ele funcionará via API mas pode ter problemas em alguns navegadores antigos via HTTP Basic Auth."
+					},
+					"response": [
+						{
+							"name": "Success Response",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"current_password\": \"G&n0101cori13\",\n  \"username\": \"admin\",\n  \"password\": \"NewSecurePass123\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:5000/api/credentials",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"credentials"
+									]
+								}
+							},
+							"status": "OK",
+							"code": 200,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"success\": true,\n  \"message\": \"Credentials updated successfully\",\n  \"username\": \"admin\",\n  \"note\": \"Credenciais salvas em credentials.json\"\n}"
+						},
+						{
+							"name": "Error - Wrong Current Password",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"current_password\": \"wrong_password\",\n  \"password\": \"NewPassword123\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:5000/api/credentials",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"credentials"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"error\": \"Current password is incorrect\"\n}"
+						},
+						{
+							"name": "Error - Password Too Short",
+							"originalRequest": {
+								"method": "POST",
+								"header": [],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n  \"current_password\": \"G&n0101cori13\",\n  \"password\": \"123\"\n}",
+									"options": {
+										"raw": {
+											"language": "json"
+										}
+									}
+								},
+								"url": {
+									"raw": "http://localhost:5000/api/credentials",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"api",
+										"credentials"
+									]
+								}
+							},
+							"status": "Bad Request",
+							"code": 400,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								}
+							],
+							"body": "{\n  \"error\": \"Password must be at least 6 characters\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Endpoints de configuração do dispositivo"
+		},
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Logout (Clear Auth Cache)",
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "http://localhost:5000/logout",
+							"protocol": "http",
+							"host": [
+								"localhost"
+							],
+							"port": "5000",
+							"path": [
+								"logout"
+							]
+						},
+						"description": "Limpa o cache de autenticação do navegador.\nEnvia status 401 para forçar o navegador a esquecer as credenciais.\n\n**Autenticação:** Não requerida\n**Método:** GET\n**Uso:** Útil para testar login com novas credenciais"
+					},
+					"response": [
+						{
+							"name": "Logout Response",
+							"originalRequest": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "http://localhost:5000/logout",
+									"protocol": "http",
+									"host": [
+										"localhost"
+									],
+									"port": "5000",
+									"path": [
+										"logout"
+									]
+								}
+							},
+							"status": "Unauthorized",
+							"code": 401,
+							"_postman_previewlanguage": "json",
+							"header": [
+								{
+									"key": "Content-Type",
+									"value": "application/json"
+								},
+								{
+									"key": "WWW-Authenticate",
+									"value": "Basic realm=\"Logout\""
+								}
+							],
+							"body": "{\n  \"message\": \"Logged out\"\n}"
+						}
+					]
+				}
+			],
+			"description": "Endpoints relacionados à autenticação"
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5000",
+			"type": "string"
+		},
+		{
+			"key": "username",
+			"value": "admin",
+			"type": "string"
+		},
+		{
+			"key": "password",
+			"value": "G&n0101cori13",
+			"type": "string"
+		}
+	]
+}
