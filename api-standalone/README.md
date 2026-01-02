@@ -636,7 +636,16 @@ setInterval(updateData, 10000);  // 10 segundos
 
 ## ⚙️ Configurações Importantes
 
-### Alterar Credenciais API Padrão
+### Alterar Credenciais API e WiFi via Interface Web
+Acesse `http://<IP>/settings.html` para:
+- **Alterar usuário e senha da API** (mínimo 6 caracteres)
+- **Configurar WiFi** (SSID e senha, mínimo 8 caracteres)
+- Ambas as alterações exigem a senha atual para confirmar
+- O dispositivo reinicia automaticamente após salvar
+
+**Documentação completa**: [WIFI_CONFIG.md](WIFI_CONFIG.md)
+
+### Alterar Credenciais API Padrão (código)
 Edite em `src/config.h`:
 ```cpp
 #define DEFAULT_API_USER "seu_usuario"

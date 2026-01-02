@@ -1,5 +1,117 @@
 # Changelog - MUST Inverter API
 
+## [2026-01-02] - Configuração WiFi via Interface Web
+
+### 📶 Nova Funcionalidade: WiFi Management
+
+#### Implementação
+Agora é possível configurar as credenciais WiFi (SSID e senha) diretamente pela interface web, sem precisar usar o WiFiManager ou resetar o dispositivo fisicamente.
+
+#### Funcionalidades Adicionadas
+
+**Interface Web (`settings.html`):**
+- Nova seção "📶 Configuração WiFi" na página de configurações
+- Campos para SSID e senha WiFi
+- Validação client-side (senha mínima 8 caracteres)
+- Ambos os campos são opcionais (deixe em branco para manter atual)
+- Labels e mensagens totalmente traduzidas (EN/PT-BR)
+
+**Backend (`/api/credentials`):**
+- Aceita novos parâmetros: `wifi_ssid` e `wifi_password`
+- Validações:
+  - Se fornecer SSID, senha é obrigatória
+  - Se fornecer senha, SSID é obrigatório
+  - Senha WiFi mínimo 8 caracteres
+- Salva no Preferences (ESP32) ou loga no console (dev-server)
+
+**ESP32 (`main.cpp`):**
+- Carrega credenciais WiFi salvas do Preferences na inicialização
+- Tenta conectar com credenciais salvas primeiro (10s timeout)
+- Se falhar, volta ao WiFiManager (modo AP)
+- Salva WiFi em namespace separado: `prefs.begin("wifi")`
+- Auto-restart após mudança de WiFi
+
+**Dev-Server (`dev-server.js`):**
+- Aceita e valida parâmetros WiFi
+- Loga no console (não aplica, apenas simula)
+- Útil para testar interface sem afetar WiFi real
+
+#### Arquivos Modificados
+
+**`data/settings.html`:**
+```html
+<h3 data-i18n="wifiConfig">📶 Configuração WiFi</h3>
+<input type="text" id="wifi-ssid" name="wifi-ssid">
+<input type="password" id="wifi-password" name="wifi-password" minlength="8">
+```
+
+**`data/js/i18n.js`:**
+```javascript
+// Adicionadas traduções
+wifiConfig: "📶 WiFi Configuration",
+wifiSSID: "WiFi Network (SSID)",
+wifiPassword: "WiFi Password",
+// ... mais traduções
+```
+
+**`dev-server.js`:**
+```javascript
+const { wifi_ssid, wifi_password } = req.body;
+// Valida e loga WiFi
+if (wifi_ssid) {
+  console.log(`WiFi SSID: ${wifi_ssid}`);
+  console.log('⚠️ Nota: WiFi config é simulado no dev-server');
+}
+```
+
+**`src/main.cpp`:**
+```cpp
+// Carrega WiFi salvo
+prefs.begin("wifi", true);
+String savedSSID = prefs.getString("ssid", "");
+String savedPassword = prefs.getString("password", "");
+
+// Tenta conectar
+if (savedSSID.length() > 0) {
+  WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
+  // ... timeout de 10s
+}
+
+// Salva novo WiFi
+if (strlen(wifiSSID) > 0) {
+  prefs.begin("wifi", false);
+  prefs.putString("ssid", String(wifiSSID));
+  prefs.putString("password", String(wifiPassword));
+  prefs.end();
+}
+```
+
+#### Documentação
+
+**Novo arquivo: `WIFI_CONFIG.md`**
+- Guia completo de uso da funcionalidade
+- Exemplos de requisição API
+- Fluxo técnico detalhado
+- Troubleshooting
+- Diagrama de sequência
+
+#### Como Usar
+
+1. Acesse `/settings.html`
+2. Preencha senha atual da API
+3. Preencha SSID e senha WiFi (opcional)
+4. Salve
+5. Dispositivo reinicia e conecta na nova rede
+
+#### Compatibilidade
+
+- ✅ ESP32 (testado)
+- ✅ ESP32-C3 (compatível)
+- ✅ ESP32-S3 (compatível)
+- ✅ Dev-Server (simulado)
+
+---
+
 ## [2026-01-02] - Auto-Restart após Mudança de Credenciais
 
 ### 🔄 Reinício Automático

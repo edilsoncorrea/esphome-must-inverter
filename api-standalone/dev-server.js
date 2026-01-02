@@ -19,6 +19,8 @@ const CREDENTIALS_FILE = path.join(__dirname, 'credentials.json');
 // Configuração de autenticação (valores padrão)
 let API_USER = 'admin';
 let API_PASS = 'admin123';
+let WIFI_SSID = '';
+let WIFI_PASSWORD = '';
 
 // Carregar credenciais salvas (se existirem)
 function loadCredentials() {
@@ -28,8 +30,14 @@ function loadCredentials() {
             const saved = JSON.parse(data);
             API_USER = saved.username || 'admin';
             API_PASS = saved.password || 'admin123';
+            WIFI_SSID = saved.wifi_ssid || '';
+            WIFI_PASSWORD = saved.wifi_password || '';
             console.log('✓ Credenciais carregadas do arquivo credentials.json');
             console.log(`   Usuário: ${API_USER}`);
+            if (WIFI_SSID) {
+                console.log(`   WiFi SSID: ${WIFI_SSID}`);
+                console.log('   WiFi Password: ***');
+            }
         } else {
             console.log('ℹ️ Usando credenciais padrão (arquivo não existe)');
         }
@@ -39,13 +47,24 @@ function loadCredentials() {
 }
 
 // Salvar credenciais em arquivo
-function saveCredentials(username, password) {
+function saveCredentials(username, password, wifiSSID, wifiPassword) {
     try {
         const data = {
             username: username,
             password: password,
             updated_at: new Date().toISOString()
         };
+        
+        // Adicionar WiFi apenas se fornecido
+        if (wifiSSID) {
+            data.wifi_ssid = wifiSSID;
+            data.wifi_password = wifiPassword;
+        } else if (WIFI_SSID) {
+            // Manter WiFi existente se não foi fornecido novo
+            data.wifi_ssid = WIFI_SSID;
+            data.wifi_password = WIFI_PASSWORD;
+        }
+        
         fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(data, null, 2), 'utf8');
         console.log('✓ Credenciais salvas em credentials.json');
         return true;
@@ -207,7 +226,7 @@ app.get('/api/status', requireAuth, (req, res) => {
         device_name: "MUST Inverter API (Dev Server)",
         ip_address: "127.0.0.1",
         mac_address: "00:00:00:00:00:00",
-        wifi_ssid: "Development",
+        wifi_ssid: WIFI_SSID || "Development",
         wifi_rssi: -42,
         uptime_seconds: Math.floor((Date.now() - START_TIME) / 1000),
         free_heap: 200000,
@@ -219,8 +238,16 @@ app.post('/api/reset', requireAuth, (req, res) => {
     res.json({ message: "Reset não disponível no dev server" });
 });
 
+app.get('/api/credentials', requireAuth, (req, res) => {
+    // Retorna as credenciais atuais (sem a senha por segurança)
+    res.json({
+        username: API_USER,
+        wifi_ssid: WIFI_SSID || null
+    });
+});
+
 app.post('/api/credentials', requireAuth, (req, res) => {
-    const { username, password, current_password } = req.body;
+    const { username, password, current_password, wifi_ssid, wifi_password } = req.body;
     
     // Validar senha atual
     if (current_password !== API_PASS) {
@@ -230,7 +257,7 @@ app.post('/api/credentials', requireAuth, (req, res) => {
     }
     
     // Validar se há algo para alterar
-    if (!username && !password) {
+    if (!username && !password && !wifi_ssid) {
         return res.status(400).json({ 
             error: 'No changes provided' 
         });
@@ -243,6 +270,19 @@ app.post('/api/credentials', requireAuth, (req, res) => {
         });
     }
     
+    // Validar WiFi
+    if (wifi_ssid && !wifi_password) {
+        return res.status(400).json({ 
+            error: 'WiFi password is required when SSID is provided' 
+        });
+    }
+    
+    if (wifi_password && wifi_password.length < 8) {
+        return res.status(400).json({ 
+            error: 'WiFi password must be at least 8 characters' 
+        });
+    }
+    
     // Avisar sobre limitações do caractere & na senha
     let warning = null;
     if (password && password.includes('&')) {
@@ -252,18 +292,31 @@ app.post('/api/credentials', requireAuth, (req, res) => {
     console.log('⚠️ Tentativa de alteração de credenciais:');
     console.log(`   Novo usuário: ${username || '(não alterado)'}`);
     console.log(`   Nova senha: ${password ? '***' : '(não alterada)'}`);
+    if (wifi_ssid) {
+        console.log(`   WiFi SSID: ${wifi_ssid}`);
+        console.log(`   WiFi Password: ${wifi_password ? '***' : '(não alterada)'}`);
+        console.log('   ⚠️ Nota: WiFi config é simulado no dev-server (apenas log)');
+    }
     if (warning) {
         console.log(`   ⚠️ Aviso: ${warning}`);
     }
+    
     // Definir valores finais
     const finalUsername = username || API_USER;
     const finalPassword = password || API_PASS;
+    const finalWifiSSID = wifi_ssid || WIFI_SSID;
+    const finalWifiPassword = wifi_password || WIFI_PASSWORD;
     
     // Salvar em arquivo
-    if (saveCredentials(finalUsername, finalPassword)) {
+    if (saveCredentials(finalUsername, finalPassword, finalWifiSSID, finalWifiPassword)) {
         // Atualizar variáveis globais
         API_USER = finalUsername;
         API_PASS = finalPassword;
+        
+        if (wifi_ssid) {
+            WIFI_SSID = finalWifiSSID;
+            WIFI_PASSWORD = finalWifiPassword;
+        }
         
         const response = { 
             success: true, 

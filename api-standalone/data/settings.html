@@ -144,6 +144,8 @@
 
         <div class="settings-form">
             <form id="credentials-form">
+                <h3 style="color: #667eea; margin-bottom: 20px;" data-i18n="apiCredentials">🔐 Credenciais da API</h3>
+                
                 <div class="form-group">
                     <label for="current-password" data-i18n="currentPassword">Senha Atual</label>
                     <input 
@@ -188,6 +190,30 @@
                         id="confirm-password" 
                         name="confirm-password"
                         autocomplete="new-password">
+                </div>
+
+                <h3 style="color: #667eea; margin: 30px 0 20px 0;" data-i18n="wifiConfig">📶 Configuração WiFi</h3>
+                
+                <div class="form-group">
+                    <label for="wifi-ssid" data-i18n="wifiSSID">SSID da Rede WiFi</label>
+                    <input 
+                        type="text" 
+                        id="wifi-ssid" 
+                        name="wifi-ssid" 
+                        placeholder="Nome da rede WiFi"
+                        autocomplete="off">
+                    <small data-i18n="wifiSSIDHelp">Deixe em branco para manter a rede atual</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="wifi-password" data-i18n="wifiPassword">Senha do WiFi</label>
+                    <input 
+                        type="password" 
+                        id="wifi-password" 
+                        name="wifi-password" 
+                        minlength="8"
+                        autocomplete="off">
+                    <small data-i18n="wifiPasswordHelp">Mínimo 8 caracteres. Deixe em branco para manter a senha atual.</small>
                 </div>
 
                 <button type="submit" class="btn-submit" id="submit-btn">
@@ -269,6 +295,37 @@
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // Carregar configurações atuais
+        async function loadCurrentSettings() {
+            try {
+                const response = await fetch(`${API_BASE}/api/credentials`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    // Preencher placeholder do username com o atual
+                    const usernameInput = document.getElementById('new-username');
+                    if (data.username) {
+                        usernameInput.placeholder = `Deixe em branco para manter: ${data.username}`;
+                    }
+                    
+                    // Preencher SSID se existir
+                    const wifiSSIDInput = document.getElementById('wifi-ssid');
+                    if (data.wifi_ssid) {
+                        wifiSSIDInput.placeholder = data.wifi_ssid;
+                    }
+                }
+            } catch (error) {
+                console.warn('Não foi possível carregar configurações atuais:', error);
+            }
+        }
+
+        // Carregar configurações ao iniciar
+        loadCurrentSettings();
+
         // Handler do formulário
         document.getElementById('credentials-form').addEventListener('submit', async function(e) {
             e.preventDefault();
@@ -277,6 +334,8 @@
             const newUsername = document.getElementById('new-username').value;
             const newPassword = document.getElementById('new-password').value;
             const confirmPassword = document.getElementById('confirm-password').value;
+            const wifiSSID = document.getElementById('wifi-ssid').value;
+            const wifiPassword = document.getElementById('wifi-password').value;
             const submitBtn = document.getElementById('submit-btn');
             
             // Validações básicas (a senha atual será validada pelo servidor)
@@ -295,7 +354,17 @@
                 return;
             }
             
-            if (!newUsername && !newPassword) {
+            if (wifiPassword && wifiPassword.length < 8) {
+                showAlert('❌ A senha do WiFi deve ter no mínimo 8 caracteres!', 'error');
+                return;
+            }
+            
+            if ((wifiSSID && !wifiPassword) || (!wifiSSID && wifiPassword)) {
+                showAlert('❌ Para alterar o WiFi, preencha SSID e senha!', 'error');
+                return;
+            }
+            
+            if (!newUsername && !newPassword && !wifiSSID) {
                 showAlert('⚠️ Nenhuma alteração foi feita.', 'info');
                 return;
             }
@@ -305,7 +374,7 @@
             submitBtn.innerHTML = '<span data-i18n="saving">⏳ Salvando...</span>';
             
             try {
-                // Enviar para o servidor - a autenticação HTTP Basic Auth será usada automaticamente
+                // Enviar credenciais para o servidor
                 const response = await fetch(`${API_BASE}/api/credentials`, {
                     method: 'POST',
                     headers: {
@@ -315,7 +384,9 @@
                     body: JSON.stringify({
                         current_password: currentPassword,
                         username: newUsername || undefined,
-                        password: newPassword || undefined
+                        password: newPassword || undefined,
+                        wifi_ssid: wifiSSID || undefined,
+                        wifi_password: wifiPassword || undefined
                     })
                 });
                 

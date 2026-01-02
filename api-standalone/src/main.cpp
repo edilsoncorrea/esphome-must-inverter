@@ -370,6 +370,8 @@ void handleApiCredentials(AsyncWebServerRequest *request, uint8_t *data, size_t 
   const char* newUsername = doc["username"] | "";
   const char* newPassword = doc["password"] | "";
   const char* currentPassword = doc["current_password"] | "";
+  const char* wifiSSID = doc["wifi_ssid"] | "";
+  const char* wifiPassword = doc["wifi_password"] | "";
   
   // Validar senha atual
   if (String(currentPassword) != currentApiPass) {
@@ -379,14 +381,25 @@ void handleApiCredentials(AsyncWebServerRequest *request, uint8_t *data, size_t 
   }
   
   // Validar se há algo para alterar
-  if (strlen(newUsername) == 0 && strlen(newPassword) == 0) {
+  if (strlen(newUsername) == 0 && strlen(newPassword) == 0 && strlen(wifiSSID) == 0) {
     request->send(400, "application/json", "{\"error\":\"No changes provided\"}");
     return;
   }
   
-  // Validar tamanho da senha
+  // Validar tamanho da senha API
   if (strlen(newPassword) > 0 && strlen(newPassword) < 6) {
     request->send(400, "application/json", "{\"error\":\"Password must be at least 6 characters\"}");
+    return;
+  }
+  
+  // Validar WiFi
+  if (strlen(wifiSSID) > 0 && strlen(wifiPassword) == 0) {
+    request->send(400, "application/json", "{\"error\":\"WiFi password is required when SSID is provided\"}");
+    return;
+  }
+  
+  if (strlen(wifiPassword) > 0 && strlen(wifiPassword) < 8) {
+    request->send(400, "application/json", "{\"error\":\"WiFi password must be at least 8 characters\"}");
     return;
   }
   
@@ -394,20 +407,39 @@ void handleApiCredentials(AsyncWebServerRequest *request, uint8_t *data, size_t 
   String finalUsername = strlen(newUsername) > 0 ? String(newUsername) : currentApiUser;
   String finalPassword = strlen(newPassword) > 0 ? String(newPassword) : currentApiPass;
   
-  // Salvar no Preferences
+  // Salvar credenciais API no Preferences
   prefs.begin("credentials", false);
   prefs.putString("api_user", finalUsername);
   prefs.putString("api_pass", finalPassword);
   prefs.end();
   
+  // Salvar WiFi no Preferences se fornecido
+  bool wifiChanged = false;
+  if (strlen(wifiSSID) > 0) {
+    prefs.begin("wifi", false);
+    prefs.putString("ssid", String(wifiSSID));
+    prefs.putString("password", String(wifiPassword));
+    prefs.end();
+    wifiChanged = true;
+    
+    Serial.println("✅ WiFi configuration updated:");
+    Serial.printf("   SSID: %s\n", wifiSSID);
+    Serial.println("   Password: ***");
+  }
+  
   // Atualizar variáveis globais (temporário até o restart)
   currentApiUser = finalUsername;
   currentApiPass = finalPassword;
   
-  Serial.println("✅ Credentials updated successfully:");
+  Serial.println("✅ API credentials updated successfully:");
   Serial.printf("   Username: %s\n", finalUsername.c_str());
   Serial.println("   Password: ***");
-  Serial.println("🔄 Device will restart in 2 seconds to apply changes...");
+  
+  if (wifiChanged) {
+    Serial.println("🔄 Device will restart in 2 seconds to apply WiFi changes...");
+  } else {
+    Serial.println("🔄 Device will restart in 2 seconds to apply credential changes...");
+  }
   
   // Responder com sucesso
   JsonDocument responseDoc;
@@ -527,24 +559,61 @@ void setup() {
   wifiManager.setAPCallback(configModeCallback);
   wifiManager.setConfigPortalTimeout(180);  // 3 minutes timeout
   
-  // Custom parameters for API credentials
-  WiFiManagerParameter custom_text("<p>Configuração de credenciais da API</p>");
-  WiFiManagerParameter api_user("api_user", "Usuário API", DEFAULT_API_USER, 40);
-  WiFiManagerParameter api_pass("api_pass", "Senha API", DEFAULT_API_PASS, 40);
+  // Check if we have saved WiFi credentials
+  prefs.begin("wifi", true);  // Read-only mode
+  String savedSSID = prefs.getString("ssid", "");
+  String savedPassword = prefs.getString("password", "");
+  prefs.end();
   
-  wifiManager.addParameter(&custom_text);
-  wifiManager.addParameter(&api_user);
-  wifiManager.addParameter(&api_pass);
-  
-  // Try to connect
-  Serial.println("Connecting to WiFi...");
-  if (!wifiManager.autoConnect(AP_SSID, AP_PASSWORD)) {
-    Serial.println("Failed to connect and hit timeout");
-    delay(3000);
-    ESP.restart();
+  // Try to connect with saved credentials first
+  if (savedSSID.length() > 0) {
+    Serial.println("Found saved WiFi credentials:");
+    Serial.printf("  SSID: %s\n", savedSSID.c_str());
+    Serial.println("Attempting to connect...");
+    
+    WiFi.begin(savedSSID.c_str(), savedPassword.c_str());
+    
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {  // 10 seconds timeout
+      delay(500);
+      Serial.print(".");
+      attempts++;
+    }
+    Serial.println();
+    
+    if (WiFi.status() == WL_CONNECTED) {
+      Serial.println("✓ WiFi connected using saved credentials!");
+      Serial.print("  IP address: ");
+      Serial.println(WiFi.localIP());
+    } else {
+      Serial.println("✗ Failed to connect with saved credentials");
+      Serial.println("  Falling back to WiFiManager...");
+      WiFi.disconnect();
+    }
   }
   
-  Serial.println("✓ WiFi connected!");
+  // If not connected, use WiFiManager
+  if (WiFi.status() != WL_CONNECTED) {
+    // Custom parameters for API credentials
+    WiFiManagerParameter custom_text("<p>Configuração de credenciais da API</p>");
+    WiFiManagerParameter api_user("api_user", "Usuário API", DEFAULT_API_USER, 40);
+    WiFiManagerParameter api_pass("api_pass", "Senha API", DEFAULT_API_PASS, 40);
+    
+    wifiManager.addParameter(&custom_text);
+    wifiManager.addParameter(&api_user);
+    wifiManager.addParameter(&api_pass);
+    
+    // Try to connect
+    Serial.println("Starting WiFiManager...");
+    if (!wifiManager.autoConnect(AP_SSID, AP_PASSWORD)) {
+      Serial.println("Failed to connect and hit timeout");
+      delay(3000);
+      ESP.restart();
+    }
+    
+    Serial.println("✓ WiFi connected via WiFiManager!");
+  }
+  
   Serial.print("  IP address: ");
   Serial.println(WiFi.localIP());
   Serial.print("  SSID: ");
@@ -571,7 +640,30 @@ void setup() {
   server.on("/api/sensors", HTTP_GET, handleApiSensors);
   server.on("/api/status", HTTP_GET, handleApiStatus);
   
-  // Credentials endpoint (POST with JSON body)
+  // Credentials endpoint (GET - retorna configurações atuais)
+  server.on("/api/credentials", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (!checkAuthentication(request)) return;
+    
+    JsonDocument doc;
+    doc["username"] = currentApiUser;
+    
+    // Carregar WiFi SSID do Preferences se existir
+    prefs.begin("wifi", true);
+    String savedSSID = prefs.getString("ssid", "");
+    prefs.end();
+    
+    if (savedSSID.length() > 0) {
+      doc["wifi_ssid"] = savedSSID;
+    } else {
+      doc["wifi_ssid"] = nullptr;
+    }
+    
+    String response;
+    serializeJson(doc, response);
+    request->send(200, "application/json", response);
+  });
+  
+  // Credentials endpoint (POST - altera credenciais)
   server.on("/api/credentials", HTTP_POST, 
     [](AsyncWebServerRequest *request) {
       // This is called after body is received
