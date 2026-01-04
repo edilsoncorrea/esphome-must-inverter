@@ -306,17 +306,24 @@
                 
                 <div class="form-group">
                     <label for="wifi-ssid" data-i18n="wifiSSID">SSID da Rede WiFi</label>
-                    <input 
-                        type="text" 
-                        id="wifi-ssid" 
-                        name="wifi-ssid" 
-                        list="wifi-networks-list"
-                        placeholder="Nome da rede WiFi"
-                        autocomplete="off">
-                    <datalist id="wifi-networks-list"></datalist>
-                    <button type="button" class="wifi-scan-button" id="scan-wifi-btn" onclick="scanWiFiNetworks()">
-                        🔍 Procurar Redes WiFi
-                    </button>
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="text" 
+                            id="wifi-ssid" 
+                            name="wifi-ssid" 
+                            list="wifi-networks-list"
+                            placeholder="Nome da rede WiFi"
+                            autocomplete="off">
+                        <datalist id="wifi-networks-list"></datalist>
+                        <button type="button" class="toggle-password" id="scan-wifi-btn" onclick="scanWiFiNetworks()" title="Procurar redes WiFi disponíveis">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                                <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                                <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                                <line x1="12" y1="20" x2="12.01" y2="20"></line>
+                            </svg>
+                        </button>
+                    </div>
                     <div id="wifi-networks-container" style="display: none;"></div>
                     <small data-i18n="wifiSSIDHelp">Deixe em branco para manter a rede atual</small>
                 </div>
@@ -491,7 +498,7 @@
             const datalist = document.getElementById('wifi-networks-list');
             
             scanBtn.disabled = true;
-            scanBtn.textContent = '⏳ Procurando...';
+            scanBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation: spin 1s linear infinite;"><circle cx="12" cy="12" r="10"></circle><path d="M12 6v6l4 2"></path></svg><style>@keyframes spin { 100% { transform: rotate(360deg); }}</style>';
             container.style.display = 'block';
             container.innerHTML = '<div class="wifi-loading">Procurando redes WiFi disponíveis...</div>';
             
@@ -534,7 +541,12 @@
                 container.innerHTML = '<div class="wifi-loading">❌ Erro ao buscar redes WiFi</div>';
             } finally {
                 scanBtn.disabled = false;
-                scanBtn.textContent = '🔍 Procurar Redes WiFi';
+                scanBtn.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 12.55a11 11 0 0 1 14.08 0"></path>
+                            <path d="M1.42 9a16 16 0 0 1 21.16 0"></path>
+                            <path d="M8.53 16.11a6 6 0 0 1 6.95 0"></path>
+                            <line x1="12" y1="20" x2="12.01" y2="20"></line>
+                        </svg>`;
             }
         }
 
