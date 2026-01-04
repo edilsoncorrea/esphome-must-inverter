@@ -234,12 +234,17 @@
                 
                 <div class="form-group">
                     <label for="current-password" data-i18n="currentPassword">Senha Atual</label>
-                    <input 
-                        type="password" 
-                        id="current-password" 
-                        name="current-password" 
-                        required
-                        autocomplete="current-password">
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="current-password" 
+                            name="current-password" 
+                            required
+                            autocomplete="current-password">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('current-password', event)" title="Mostrar/Ocultar senha">
+                            👁️
+                        </button>
+                    </div>
                     <small data-i18n="currentPasswordHelp">Digite sua senha atual para confirmar a alteração</small>
                 </div>
 
@@ -257,12 +262,17 @@
 
                 <div class="form-group">
                     <label for="new-password" data-i18n="newPassword">Nova Senha</label>
-                    <input 
-                        type="password" 
-                        id="new-password" 
-                        name="new-password" 
-                        minlength="6"
-                        autocomplete="new-password">
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="new-password" 
+                            name="new-password" 
+                            minlength="6"
+                            autocomplete="new-password">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('new-password', event)" title="Mostrar/Ocultar senha">
+                            👁️
+                        </button>
+                    </div>
                     <div class="password-strength">
                         <div class="password-strength-bar" id="strength-bar"></div>
                     </div>
@@ -271,11 +281,16 @@
 
                 <div class="form-group">
                     <label for="confirm-password" data-i18n="confirmPassword">Confirmar Nova Senha</label>
-                    <input 
-                        type="password" 
-                        id="confirm-password" 
-                        name="confirm-password"
-                        autocomplete="new-password">
+                    <div class="password-input-wrapper">
+                        <input 
+                            type="password" 
+                            id="confirm-password" 
+                            name="confirm-password"
+                            autocomplete="new-password">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('confirm-password', event)" title="Mostrar/Ocultar senha">
+                            👁️
+                        </button>
+                    </div>
                 </div>
 
                 <h3 style="color: #667eea; margin: 30px 0 20px 0;" data-i18n="wifiConfig">📶 Configuração WiFi</h3>
@@ -306,7 +321,7 @@
                             name="wifi-password" 
                             minlength="8"
                             autocomplete="off">
-                        <button type="button" class="toggle-password" onclick="toggleWifiPasswordVisibility(event)" title="Mostrar/Ocultar senha">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('wifi-password', event)" title="Mostrar/Ocultar senha">
                             👁️
                         </button>
                     </div>
@@ -430,8 +445,9 @@
         loadCurrentSettings();
 
         // Toggle WiFi password visibility
-        function toggleWifiPasswordVisibility(event) {
-            const passwordInput = document.getElementById('wifi-password');
+        // Função genérica para toggle de senha
+        function togglePasswordVisibility(inputId, event) {
+            const passwordInput = document.getElementById(inputId);
             const toggleBtn = event.currentTarget;
             
             if (passwordInput.type === 'password') {
@@ -441,6 +457,11 @@
                 passwordInput.type = 'password';
                 toggleBtn.textContent = '👁️';
             }
+        }
+        
+        // Mantém compatibilidade com chamada antiga do wifi
+        function toggleWifiPasswordVisibility(event) {
+            togglePasswordVisibility('wifi-password', event);
         }
 
         // Scan WiFi networks

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Diagnóstico JavaScript</title>
+    <style>
+        body { font-family: Arial; padding: 40px; background: #f0f0f0; }
+        .box { background: white; padding: 30px; border-radius: 10px; max-width: 600px; margin: 20px auto; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        .status { padding: 20px; margin: 10px 0; border-radius: 5px; font-weight: bold; }
+        .error { background: #ffebee; color: #c62828; border: 2px solid #c62828; }
+        .success { background: #e8f5e9; color: #2e7d32; border: 2px solid #2e7d32; }
+        button { padding: 15px 30px; font-size: 18px; cursor: pointer; border: none; background: #667eea; color: white; border-radius: 5px; margin: 10px 0; }
+        button:hover { background: #5568d3; }
+        input { width: 100%; padding: 12px; font-size: 16px; border: 2px solid #ddd; border-radius: 5px; box-sizing: border-box; }
+        h1 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>🔍 Diagnóstico de JavaScript</h1>
+        
+        <div id="js-status" class="status error">
+            ❌ JavaScript NÃO está funcionando
+        </div>
+        
+        <script>
+            document.getElementById('js-status').className = 'status success';
+            document.getElementById('js-status').innerHTML = '✅ JavaScript ESTÁ FUNCIONANDO!';
+        </script>
+    </div>
+
+    <div class="box">
+        <h1>🧪 Teste do Toggle</h1>
+        
+        <p><strong>Digite algo:</strong></p>
+        <input type="password" id="pass" value="Teste123">
+        
+        <button onclick="
+            var inp = document.getElementById('pass');
+            var btn = event.target;
+            if (inp.type === 'password') {
+                inp.type = 'text';
+                btn.innerHTML = '✅ FUNCIONOU! Clique para ocultar';
+                btn.style.background = '#4caf50';
+            } else {
+                inp.type = 'password';
+                btn.innerHTML = '🔄 Clique para mostrar';
+                btn.style.background = '#667eea';
+            }
+        ">🔄 Clique para mostrar</button>
+        
+        <div id="console" style="margin-top: 20px; padding: 15px; background: #263238; color: #aed581; border-radius: 5px; font-family: monospace; font-size: 14px; min-height: 100px;">
+            <strong>Console:</strong><br>
+        </div>
+    </div>
+
+    <script>
+        function log(msg) {
+            var d = new Date();
+            var time = d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds();
+            document.getElementById('console').innerHTML += time + ' - ' + msg + '<br>';
+        }
+        
+        log('Script carregado');
+        log('Input encontrado: ' + !!document.getElementById('pass'));
+        
+        window.onerror = function(msg, url, line) {
+            log('ERRO: ' + msg + ' (linha ' + line + ')');
+            return false;
+        };
+        
+        log('Tudo pronto! Clique no botão.');
+    </script>
+</body>
+</html>

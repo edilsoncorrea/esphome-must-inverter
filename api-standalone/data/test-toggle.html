@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Password Toggle</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        .password-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            font-size: 16px;
+        }
+        button {
+            padding: 10px 15px;
+            margin-left: 10px;
+            font-size: 20px;
+            cursor: pointer;
+            border: 1px solid #ccc;
+            background: white;
+            border-radius: 4px;
+        }
+        button:hover {
+            background: #f0f0f0;
+        }
+        .log {
+            margin-top: 20px;
+            padding: 10px;
+            background: #f5f5f5;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Test Password Toggle</h1>
+    
+    <h2>Versão 1: onclick inline com event</h2>
+    <div class="password-input-wrapper">
+        <input type="password" id="wifi-password" value="teste123">
+        <button type="button" onclick="toggleWifiPasswordVisibility(event)">👁️</button>
+    </div>
+    
+    <h2>Versão 2: addEventListener</h2>
+    <div class="password-input-wrapper">
+        <input type="password" id="wifi-password-2" value="teste456">
+        <button type="button" id="toggle-btn-2">👁️</button>
+    </div>
+    
+    <h2>Versão 3: onclick sem event</h2>
+    <div class="password-input-wrapper">
+        <input type="password" id="wifi-password-3" value="teste789">
+        <button type="button" onclick="toggleVersion3(this)">👁️</button>
+    </div>
+    
+    <div class="log" id="log">
+        <strong>Log:</strong><br>
+    </div>
+
+    <script>
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            logDiv.innerHTML += new Date().toLocaleTimeString() + ' - ' + msg + '<br>';
+        }
+        
+        log('Página carregada');
+        
+        // Versão 1: função global com event
+        function toggleWifiPasswordVisibility(event) {
+            log('toggleWifiPasswordVisibility chamada');
+            const passwordInput = document.getElementById('wifi-password');
+            const toggleBtn = event.currentTarget;
+            
+            log('Input type antes: ' + passwordInput.type);
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                toggleBtn.textContent = '👁️‍🗨️';
+                log('Mudou para TEXT');
+            } else {
+                passwordInput.type = 'password';
+                toggleBtn.textContent = '👁️';
+                log('Mudou para PASSWORD');
+            }
+        }
+        
+        // Versão 2: addEventListener
+        document.addEventListener('DOMContentLoaded', () => {
+            log('DOMContentLoaded disparado');
+            
+            const btn2 = document.getElementById('toggle-btn-2');
+            btn2.addEventListener('click', function() {
+                log('Versão 2 clicada');
+                const passwordInput = document.getElementById('wifi-password-2');
+                
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    this.textContent = '👁️‍🗨️';
+                } else {
+                    passwordInput.type = 'password';
+                    this.textContent = '👁️';
+                }
+            });
+        });
+        
+        // Versão 3: função simples com this
+        function toggleVersion3(button) {
+            log('toggleVersion3 chamada');
+            const passwordInput = document.getElementById('wifi-password-3');
+            
+            if (passwordInput.type === 'password') {
+                passwordInput.type = 'text';
+                button.textContent = '👁️‍🗨️';
+            } else {
+                passwordInput.type = 'password';
+                button.textContent = '👁️';
+            }
+        }
+    </script>
+</body>
+</html>
