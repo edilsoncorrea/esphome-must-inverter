@@ -612,21 +612,21 @@ void setup() {
     }
     
     Serial.println("✓ WiFi connected via WiFiManager!");
+    
+    // Save API credentials if provided
+    if (strlen(api_user.getValue()) > 0) {
+      prefs.begin("credentials", false);
+      prefs.putString("api_user", api_user.getValue());
+      prefs.putString("api_pass", api_pass.getValue());
+      prefs.end();
+      Serial.println("✓ API credentials saved");
+    }
   }
   
   Serial.print("  IP address: ");
   Serial.println(WiFi.localIP());
   Serial.print("  SSID: ");
   Serial.println(WiFi.SSID());
-  
-  // Save API credentials if provided
-  if (strlen(api_user.getValue()) > 0) {
-    prefs.begin("credentials", false);
-    prefs.putString("api_user", api_user.getValue());
-    prefs.putString("api_pass", api_pass.getValue());
-    prefs.end();
-    Serial.println("✓ API credentials saved");
-  }
   
   // Setup web server routes
   server.on("/", HTTP_GET, handleRoot);
