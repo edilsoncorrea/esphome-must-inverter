@@ -56,6 +56,20 @@ This configuration supports all **PV/PH18** and **PV19** series **Must Solar Inv
 
 Watch a live demonstration on [YouTube](https://youtu.be/0Ef8nHztPZQ).
 
+## Available Configurations
+
+| File / Folder | Board | Display | Description |
+|---|---|---|---|
+| `esp32-pv18.yaml` | ESP32 | — | Full PV18 monitor |
+| `esp32-pv19.yaml` | ESP32 | — | Full PV19 monitor |
+| `esp32-pv29-*.yaml` | ESP32 | — | PV29 variants (flow control, scanner, etc.) |
+| `esp8266-pv19.yaml` | ESP8266 | — | Lightweight PV19 (ESP8266) |
+| `esp01-pv18.yaml` | ESP-01 | — | Minimal PV18 (ESP-01) |
+| [`esp32-c3-pv19-oled/`](esp32-c3-pv19-oled/README.md) | ESP32-C3 | SSD1306 0.96" OLED | PV19 monitor with I2C OLED display |
+| `esp32-s3-pv18-usb.yaml` | ESP32-S3 | — | PV18 via USB (ESP32-S3) |
+
+---
+
 ## Usage
 
 1. **Clone this Repository**: Get all YAML files and relevant assets.  
