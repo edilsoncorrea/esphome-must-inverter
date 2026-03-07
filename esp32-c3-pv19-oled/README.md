@@ -1,6 +1,24 @@
 # ESP32-C3 + OLED SSD1306 — Monitor MUST PV19 Inverter
 
-Monitor de inversor MUST PV19 via RS485/Modbus com display OLED 0.96" SSD1306 I2C, rodando em ESP32-C3.
+Display OLED 0.96" SSD1306 I2C para monitoramento do inversor MUST PV19, rodando em ESP32-C3.  
+Os dados são lidos do **Home Assistant** (que já os recebe de outro ESPHome conectado ao inversor via RS485/Modbus), sem necessidade de conexão direta ao inversor.
+
+## Arquitetura
+
+```
+Inversor MUST PV19
+       │ RS485/Modbus
+       ▼
+ESP32 (esp32-pv19) ──► Home Assistant
+                              │ API nativa
+                              ▼
+                    ESP32-C3 (este dispositivo)
+                              │ I2C
+                              ▼
+                       Display OLED SSD1306
+```
+
+---
 
 ## Hardware necessário
 
@@ -8,23 +26,12 @@ Monitor de inversor MUST PV19 via RS485/Modbus com display OLED 0.96" SSD1306 I2
 |---|---|
 | Microcontrolador | ESP32-C3 (esp32-c3-devkitm-1) |
 | Display | SSD1306 OLED 0.96" 128×64 I2C |
-| Conversor RS485 | MAX485 / TTL-485 |
-| Inversor | MUST PV19 (110 V saída, banco 48 V) |
+
+> Não há RS485 neste dispositivo. A leitura do inversor é feita por outro ESP32 e consumida pelo Home Assistant.
 
 ---
 
 ## Ligações (pinagem)
-
-### RS485 → ESP32-C3
-
-| MAX485 | ESP32-C3 | Descrição |
-|--------|----------|-----------|
-| TX     | GPIO19   | Transmissão (DE/RE controlados automaticamente) |
-| RX     | GPIO18   | Recepção |
-| VCC    | 3.3 V    | Alimentação |
-| GND    | GND      | Terra |
-
-> O RS485 ocupa GPIO18/19, portanto o I2C **deve** usar outros pinos.
 
 ### SSD1306 I2C → ESP32-C3
 
@@ -63,25 +70,38 @@ Monitor de inversor MUST PV19 via RS485/Modbus com display OLED 0.96" SSD1306 I2
 
 ---
 
-## Registradores Modbus utilizados
+## Sensores lidos do Home Assistant
 
-| ID ESPHome | Registrador | Tipo | Descrição |
-|------------|-------------|------|-----------|
-| `soc` | 113 | HOLDING | Estado de carga (%) |
-| `inv_work_state` | 25201 | HOLDING | Estado de trabalho do inversor (0–6) |
-| `inv_voltage` | 25206 | HOLDING | Tensão saída AC (×0.1 V) |
-| `sys_load` | 25216 | HOLDING | Carga do sistema (%) |
-| `temp_ac_rad` | 25233 | HOLDING | Temperatura radiador AC (°C) |
-| `temp_battery` | 25269 | HOLDING | Temperatura da bateria (°C) ¹ |
-| `bat_current` | 25274 | S_WORD | Corrente da bateria (A, pode ser negativo) |
+Os `entity_id` são configurados nas `substitutions` do YAML. O padrão ESPHome é `sensor.{device_name}_{sensor_name}` (espaços substituídos por `_`).
 
-> ¹ O registrador 25269 para temperatura da bateria pode não estar disponível em todos os modelos PV19.
-> Se o sensor aparecer sempre como 0 ou com erro, comente/remova o bloco `temp_battery` no YAML
-> e ajuste a linha 3 do display lambda para exibir apenas `Ti`.
+| ID local | Substitution | Sensor padrão (PV19) | Descrição |
+|----------|-------------|----------------------|-----------|
+| `soc` | `ha_soc` | `sensor.must_inverter_pv19_state_of_charge` | Estado de carga (%) |
+| `inv_work_state` | `ha_inv_work_state` | `sensor.must_inverter_pv19_inverter_work_state` | Estado de trabalho do inversor (0–6) |
+| `inv_voltage` | `ha_inv_voltage` | `sensor.must_inverter_pv19_inverter_voltage` | Tensão saída AC (V) |
+| `sys_load` | `ha_sys_load` | `sensor.must_inverter_pv19_system_load` | Carga do sistema (%) |
+| `temp_ac_rad` | `ha_temp_ac_rad` | `sensor.must_inverter_pv19_ac_radiator_temp` | Temperatura radiador AC (°C) |
+| `temp_battery` | `ha_temp_battery` | `sensor.must_inverter_pv19_battery_temp` | Temperatura da bateria (°C) |
+| `bat_current` | `ha_bat_current` | `sensor.must_inverter_pv19_battery_current` | Corrente da bateria (A, negativo = descarga) |
+
+> Ajuste os valores nas `substitutions` se o nome do seu dispositivo ESPHome for diferente de `must-inverter-pv19`.
 
 ---
 
-## Tabela de estados do inversor (registrador 25201)
+## Comportamento na inicialização
+
+Enquanto o ESP32-C3 ainda não recebeu dados do Home Assistant (sensores em estado `NaN`), o display exibe:
+
+```
+Aguardando
+Home Assistant...
+```
+
+Assim que os primeiros valores chegarem, o display passa automaticamente para o layout normal.
+
+---
+
+## Tabela de estados do inversor (`inv_work_state`, registrador 25201)
 
 | Valor | Estado | Display |
 |-------|--------|---------|
@@ -127,7 +147,7 @@ esphome run esp32-c3-pv19-oled.yaml --device <IP_DO_ESP>
 
 ## Personalização
 
-- **Endereço Modbus**: padrão `0x4`. Altere em `modbus_controller > address` se seu inversor usar outro endereço.
-- **Intervalo de atualização Modbus**: padrão `20s`. Altere em `modbus_controller > update_interval`.
+- **Entity IDs**: ajuste os valores de `ha_*` nas `substitutions` conforme os nomes dos seus sensores no Home Assistant.
 - **Intervalo do display**: padrão `5s`. Altere em `display > update_interval`.
 - **Pinos I2C**: altere `i2c_sda` / `i2c_scl` nas `substitutions` caso use outros pinos.
+- **Endereço I2C do display**: padrão `0x3C`. Altere em `display > address` se necessário.
