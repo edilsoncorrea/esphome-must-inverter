@@ -331,18 +331,19 @@ display:
       it.print(62, 13, id(f11), "Vs:");
       if (!(al_vs_lo || al_vs_hi) || bv)   it.printf(80, 13, id(f11), "%.0fV", id(inv_voltage).state);
 
-      // ── Linha 3: temp inversor, temp bateria (piscam se altas), % carga ─
+      // ── Linha 3: temp inversor + temp bateria (piscam independentemente) ─
       // Posições X fixas para cada campo evitam deslocamento com fonte proporcional
       it.print(0,  26, id(f11), "Ti:");
-      if (!al_ti   || bv) it.printf(15, 26, id(f11), "%2.0fC", id(temp_ac_rad).state);
+      if (!al_ti || bv) it.printf(15, 26, id(f11), "%2.0fC", id(temp_ac_rad).state);
       it.print(39, 26, id(f11), "Tb:");
-      if (!al_tb   || bv) it.printf(57, 26, id(f11), "%2.0fC", id(temp_battery).state);
-      it.print(81, 26, id(f11), "C:");
-      if (!al_load || bv) it.printf(92, 26, id(f11), "%2.0f%%", id(sys_load).state);
+      if (!al_tb || bv) it.printf(57, 26, id(f11), "%2.0fC", id(temp_battery).state);
 
-      // ── Linha 4: consumo instantâneo (pisca se carga alta) ───────────────
-      if (!al_load || bv)
-        it.printf(0, 39, id(f10), "Consumo: %.0fW", id(load_power).state);
+      // ── Linha 4: consumo (W) + % carga — piscam independentemente ────────
+      // Posições X fixas: "Consumo:" fixo, valor pisca; "C:" fixo, valor pisca
+      it.print(0, 39, id(f10), "Consumo:");
+      if (!al_load || bv) it.printf(52, 39, id(f10), "%.0fW", id(load_power).state);
+      it.print(90, 39, id(f10), "C:");
+      if (!al_load || bv) it.printf(103, 39, id(f10), "%2.0f%%", id(sys_load).state);
 
       // ── Linha 5: barra de SOC (contorno fixo; interior e % piscam se baixo)
       it.rectangle(0, 52, 102, 12);
