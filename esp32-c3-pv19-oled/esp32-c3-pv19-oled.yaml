@@ -272,7 +272,7 @@ sensor:
 #
 # Layout (128x64 px, f11=11 px / f10=10 px):
 #
-#  y= 0  │ B:75%  +12A  [REDE]     │  SOC¹ + corrente bateria + fonte
+#  y= 0  │ B:75%  +12A  [plug/bat]  │  SOC¹ + corrente bateria + ícone fonte
 #  y=13  │ Vb:52.4V  Vs:110V       │  tensão bateria² + tensão saída AC³
 #  y=26  │ Ti:38C  Tb:32C  C:42%   │  temp inversor⁴ + temp bateria⁵ + carga⁶
 #  y=39  │ Consumo: 850W           │  potência instantânea⁶
@@ -286,6 +286,9 @@ sensor:
 #   ⁴ Temp inversor > temp_inv_max → beep_critical (5× 2 kHz)  ← prioritário
 #   ⁵ Temp bateria > temp_bat_max  → beep_critical (5× 2 kHz)  ← prioritário
 #   ⁶ Carga > alarm_load_max       → beep_medium  (2× 1 kHz)
+#
+#   REDE → ícone tomada x=90 (2 pinos + corpo + cabo), fixo
+#   BAT  → ícone bateria x=90 (contorno + nível SOC + terminal), pisca 10×
 #
 # Fonte [REDE/BAT] baseada no registrador 25201 (Inverter Work state):
 #   3=Grid, 4=Bypass, 6=Grid Charging → REDE | demais → BAT
@@ -314,15 +317,27 @@ display:
       bool al_tb     = !isnan(id(temp_battery).state) && id(temp_battery).state > ${alarm_temp_bat_max};
       bool bv        = id(blink_on); // fase visível do pisca (alterna a 1 Hz)
 
-      // ── Linha 1: SOC (pisca se baixo), corrente bateria, fonte ──────────
+      // ── Linha 1: SOC (pisca se baixo), corrente bateria, ícone fonte ───────
       int ws = (int)id(inv_work_state).state;
       bool on_bat = !(ws == 3 || ws == 4 || ws == 6);
-      // [REDE] fixo; [BAT ] pisca devagar (1,5 s on / 1,5 s off)
-      const char* fonte = !on_bat ? "[REDE]" : (id(blink_slow) ? "[BAT ]" : "      ");
       char soc_s[6];
       if (!al_soc || bv) snprintf(soc_s, sizeof(soc_s), "%2.0f%%", id(soc).state);
       else               snprintf(soc_s, sizeof(soc_s), "   ");
-      it.printf(0, 0, id(f11), "B:%s %+.0fA %s", soc_s, id(bat_current).state, fonte);
+      it.printf(0, 0, id(f11), "B:%s %+.0fA", soc_s, id(bat_current).state);
+      // Ícone da fonte a X=90 (posição fixa, ~11px de largura)
+      if (!on_bat) {
+        // Tomada/plug (REDE): dois pinos + corpo + cabo
+        it.filled_rectangle(92, 0, 2, 3);   // pino esquerdo
+        it.filled_rectangle(97, 0, 2, 3);   // pino direito
+        it.rectangle(       90, 3, 11, 5);  // corpo da tomada
+        it.filled_rectangle(94, 8,  3, 2);  // cabo
+      } else if (id(blink_slow)) {
+        // Bateria (BAT): contorno + terminal + preenchimento SOC
+        it.rectangle(       90,  2, 12, 7); // corpo
+        it.filled_rectangle(102, 4,  2, 3); // terminal (+)
+        int fill = (int)(id(soc).state / 100.0f * 10.0f);
+        if (fill > 0) it.filled_rectangle(91, 3, fill, 5); // nível SOC
+      }
 
       // ── Linha 2: tensão bateria (pisca fora de faixa) + saída AC ────────
       // Posições X fixas para evitar deslocamento com fonte proporcional
