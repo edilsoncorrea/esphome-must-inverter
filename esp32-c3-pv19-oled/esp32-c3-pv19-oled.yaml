@@ -13,7 +13,20 @@ substitutions:
   ha_sys_load:       sensor.must_inverter_pv19_system_load
   ha_temp_ac_rad:    sensor.must_inverter_pv19_ac_radiator_temp
   ha_temp_battery:   sensor.must_inverter_pv19_battery_temp
+  ha_bat_voltage:    sensor.must_inverter_pv19_battery_voltage
   ha_bat_current:    sensor.must_inverter_pv19_battery_current
+  ha_load_power:     sensor.must_inverter_pv19_load_power
+  # Buzzer — ajuste o GPIO conforme a sua ligação
+  buzzer_gpio: GPIO3
+  # Limiares de alarme — ajuste conforme a sua bateria e instalação
+  alarm_soc_min: "20"         # %   → SOC mínimo
+  alarm_bat_v_min: "46.0"     # V   → tensão mínima da bateria (48 V)
+  alarm_bat_v_max: "58.4"     # V   → tensão máxima da bateria
+  alarm_load_max: "90"        # %   → carga máxima do sistema
+  alarm_grid_v_min: "100"     # V   → tensão mínima da rede/saída AC
+  alarm_grid_v_max: "130"     # V   → tensão máxima da rede/saída AC
+  alarm_temp_inv_max: "65"    # °C  → temperatura máxima do inversor
+  alarm_temp_bat_max: "45"    # °C  → temperatura máxima da bateria
 
 esphome:
   name: ${name}
@@ -33,7 +46,6 @@ wifi:
       password: !secret wifi_password
   ap:
     ssid: ${device_name}
-    password: !secret ap_password
 
 captive_portal:
 
@@ -65,8 +77,146 @@ font:
     id: f10
     size: 10
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Estado global para pisca-pisca dos alarmes visuais
+# ─────────────────────────────────────────────────────────────────────────────
+globals:
+  - id: blink_on
+    type: bool
+    initial_value: 'false'
+  - id: blink_slow
+    type: bool
+    initial_value: 'true'
+  - id: bat_blink_count
+    type: int
+    initial_value: '0'
 
+# Buzzer conectado em ${buzzer_gpio} (funciona com buzzers activos e passivos)
+output:
+  - platform: ledc
+    pin: ${buzzer_gpio}
+    id: buzzer_pwm
+    frequency: 1000Hz
 
+interval:
+  # Alterna estado do pisca a cada 500 ms (1 Hz) — alarmes visuais
+  - interval: 500ms
+    then:
+      - lambda: id(blink_on) = !id(blink_on);
+  # Pisca indicador [BAT ] 10 vezes ao ligar na bateria, depois fica fixo
+  # Ao voltar à rede, reset o contador para a próxima vez
+  - interval: 1500ms
+    then:
+      - lambda: |-
+          int ws = (int)id(inv_work_state).state;
+          bool on_bat = !(ws == 3 || ws == 4 || ws == 6);
+          if (!on_bat) {
+            // Na rede: zera contador para próxima transição para bateria
+            id(bat_blink_count) = 0;
+            id(blink_slow) = true;
+          } else if (id(bat_blink_count) < 20) {
+            // Na bateria: ainda a piscar (10 ciclos = 20 semi-ciclos)
+            id(blink_slow) = !id(blink_slow);
+            id(bat_blink_count) += 1;
+          } else {
+            // Terminou os 10 blinks: fica visível fixo
+            id(blink_slow) = true;
+          }
+  # Verifica alarmes e toca padrão sonoro a cada 15 s
+  - interval: 15s
+    then:
+      - script.execute: alarm_check
+
+script:
+  # ── Verificação de prioridade de alarmes ──────────────────────────────────
+  - id: alarm_check
+    mode: restart
+    then:
+      - if:
+          condition:
+            lambda: |-
+              return (!isnan(id(temp_battery).state) && id(temp_battery).state > ${alarm_temp_bat_max})
+                  || (!isnan(id(temp_ac_rad).state)  && id(temp_ac_rad).state  > ${alarm_temp_inv_max})
+                  || (!isnan(id(bat_voltage).state)  && id(bat_voltage).state  < ${alarm_bat_v_min});
+          then:
+            - script.execute: beep_critical   # 5× rápido 2 kHz
+          else:
+            - if:
+                condition:
+                  lambda: |-
+                    return id(soc).state < ${alarm_soc_min}
+                        || (!isnan(id(bat_voltage).state) && id(bat_voltage).state > ${alarm_bat_v_max});
+                then:
+                  - script.execute: beep_high       # 3× médio 1,5 kHz
+                else:
+                  - if:
+                      condition:
+                        lambda: |-
+                          return id(sys_load).state > ${alarm_load_max}
+                              || (!isnan(id(inv_voltage).state) && id(inv_voltage).state < ${alarm_grid_v_min})
+                              || (!isnan(id(inv_voltage).state) && id(inv_voltage).state > ${alarm_grid_v_max});
+                      then:
+                        - script.execute: beep_medium     # 2× lento 1 kHz
+
+  # ── Crítico: temp bateria/inversor alta, tensão bateria mínima ─────────────
+  # 5 bipes rápidos a 2 kHz — o mais urgente
+  - id: beep_critical
+    mode: restart
+    then:
+      - output.ledc.set_frequency:
+          id: buzzer_pwm
+          frequency: 2000Hz
+      - repeat:
+          count: 5
+          then:
+            - output.set_level:
+                id: buzzer_pwm
+                level: 0.5
+            - delay: 100ms
+            - output.set_level:
+                id: buzzer_pwm
+                level: 0.0
+            - delay: 80ms
+
+  # ── Alto: SOC mínimo, tensão bateria máxima ───────────────────────────────
+  # 3 bipes médios a 1,5 kHz
+  - id: beep_high
+    mode: restart
+    then:
+      - output.ledc.set_frequency:
+          id: buzzer_pwm
+          frequency: 1500Hz
+      - repeat:
+          count: 3
+          then:
+            - output.set_level:
+                id: buzzer_pwm
+                level: 0.5
+            - delay: 200ms
+            - output.set_level:
+                id: buzzer_pwm
+                level: 0.0
+            - delay: 150ms
+
+  # ── Médio: carga máxima, tensão AC fora de faixa ──────────────────────────
+  # 2 bipes lentos a 1 kHz
+  - id: beep_medium
+    mode: restart
+    then:
+      - output.ledc.set_frequency:
+          id: buzzer_pwm
+          frequency: 1000Hz
+      - repeat:
+          count: 2
+          then:
+            - output.set_level:
+                id: buzzer_pwm
+                level: 0.5
+            - delay: 300ms
+            - output.set_level:
+                id: buzzer_pwm
+                level: 0.0
+            - delay: 300ms
 
 # Os sensores são lidos do Home Assistant, que já os recebe
 # do ESPHome conectado ao inversor via RS485.
@@ -103,19 +253,39 @@ sensor:
     internal: true
 
   - platform: homeassistant
+    id: bat_voltage
+    entity_id: ${ha_bat_voltage}
+    internal: true
+
+  - platform: homeassistant
     id: bat_current
     entity_id: ${ha_bat_current}
+    internal: true
+
+  - platform: homeassistant
+    id: load_power
+    entity_id: ${ha_load_power}
     internal: true
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DISPLAY OLED SSD1306 0.96" 128x64 I2C
 #
-# Layout (128x64 px, fonte tamanho 11):
+# Layout (128x64 px, f11=11 px / f10=10 px):
 #
-#  y= 0  │ B:75%  +12A  [REDE] │  SOC + corrente bateria + fonte
-#  y=13  │ Vs:110V   Carga:42% │  tensão saída AC + % carga inversor
-#  y=26  │ Ti: 38C   Tb: 32C   │  temp inversor + temp bateria
-#  y=41  │ [▓▓▓▓▓▓▓░░░]  75%  │  barra visual SOC (100px)
+#  y= 0  │ B:75%  +12A  [REDE]     │  SOC¹ + corrente bateria + fonte
+#  y=13  │ Vb:52.4V  Vs:110V       │  tensão bateria² + tensão saída AC³
+#  y=26  │ Ti:38C  Tb:32C  C:42%   │  temp inversor⁴ + temp bateria⁵ + carga⁶
+#  y=39  │ Consumo: 850W           │  potência instantânea⁶
+#  y=52  │ [▓▓▓▓▓▓▓░░░]  75%      │  barra visual SOC¹
+#
+# Alarmes visuais (pisca a 1 Hz) e sonoros via buzzer em ${buzzer_gpio}:
+#   ¹ SOC < alarm_soc_min          → beep_high    (3× 1,5 kHz)
+#   ² Vbat < alarm_bat_v_min       → beep_critical (5× 2 kHz)  ← prioritário
+#   ² Vbat > alarm_bat_v_max       → beep_high    (3× 1,5 kHz)
+#   ³ Vs fora de [grid_v_min..max] → beep_medium  (2× 1 kHz)
+#   ⁴ Temp inversor > temp_inv_max → beep_critical (5× 2 kHz)  ← prioritário
+#   ⁵ Temp bateria > temp_bat_max  → beep_critical (5× 2 kHz)  ← prioritário
+#   ⁶ Carga > alarm_load_max       → beep_medium  (2× 1 kHz)
 #
 # Fonte [REDE/BAT] baseada no registrador 25201 (Inverter Work state):
 #   3=Grid, 4=Bypass, 6=Grid Charging → REDE | demais → BAT
@@ -124,7 +294,7 @@ display:
   - platform: ssd1306_i2c
     model: "SSD1306 128x64"
     address: 0x3C   # alternativa: 0x3D
-    update_interval: 5s
+    update_interval: 500ms
     lambda: |-
       // Aguarda dados válidos do Home Assistant (NaN = ainda não recebido)
       if (isnan(id(soc).state) || isnan(id(inv_work_state).state)) {
@@ -133,25 +303,50 @@ display:
         return;
       }
 
-      // Linha 1: SOC, corrente bateria (+ carregando / - descarregando), fonte
+      // ── Flags de alarme ────────────────────────────────────────────────
+      bool al_soc    = id(soc).state < ${alarm_soc_min};
+      bool al_bat_lo = !isnan(id(bat_voltage).state) && id(bat_voltage).state < ${alarm_bat_v_min};
+      bool al_bat_hi = !isnan(id(bat_voltage).state) && id(bat_voltage).state > ${alarm_bat_v_max};
+      bool al_load   = id(sys_load).state > ${alarm_load_max};
+      bool al_vs_lo  = !isnan(id(inv_voltage).state) && id(inv_voltage).state < ${alarm_grid_v_min};
+      bool al_vs_hi  = !isnan(id(inv_voltage).state) && id(inv_voltage).state > ${alarm_grid_v_max};
+      bool al_ti     = !isnan(id(temp_ac_rad).state)  && id(temp_ac_rad).state  > ${alarm_temp_inv_max};
+      bool al_tb     = !isnan(id(temp_battery).state) && id(temp_battery).state > ${alarm_temp_bat_max};
+      bool bv        = id(blink_on); // fase visível do pisca (alterna a 1 Hz)
+
+      // ── Linha 1: SOC (pisca se baixo), corrente bateria, fonte ──────────
       int ws = (int)id(inv_work_state).state;
-      const char* fonte = (ws == 3 || ws == 4 || ws == 6) ? "REDE" : "BAT ";
-      it.printf(0,  0, id(f11), "B:%2.0f%% %+.0fA [%s]",
-        id(soc).state, id(bat_current).state, fonte);
+      bool on_bat = !(ws == 3 || ws == 4 || ws == 6);
+      // [REDE] fixo; [BAT ] pisca devagar (1,5 s on / 1,5 s off)
+      const char* fonte = !on_bat ? "[REDE]" : (id(blink_slow) ? "[BAT ]" : "      ");
+      char soc_s[6];
+      if (!al_soc || bv) snprintf(soc_s, sizeof(soc_s), "%2.0f%%", id(soc).state);
+      else               snprintf(soc_s, sizeof(soc_s), "   ");
+      it.printf(0, 0, id(f11), "B:%s %+.0fA %s", soc_s, id(bat_current).state, fonte);
 
-      // Linha 2: tensão saída inversor (110V) + % carga do sistema
-      it.printf(0, 13, id(f11), "Vs:%.0fV   Carga:%2.0f%%",
-        id(inv_voltage).state, id(sys_load).state);
+      // ── Linha 2: tensão bateria (pisca fora de faixa) + saída AC ────────
+      // Posições X fixas para evitar deslocamento com fonte proporcional
+      it.print(0,  13, id(f11), "Vb:");
+      if (!(al_bat_lo || al_bat_hi) || bv) it.printf(18, 13, id(f11), "%.1fV", id(bat_voltage).state);
+      it.print(62, 13, id(f11), "Vs:");
+      if (!(al_vs_lo || al_vs_hi) || bv)   it.printf(80, 13, id(f11), "%.0fV", id(inv_voltage).state);
 
-      // Linha 3: temperatura do inversor (radiador AC) e da bateria
-      it.printf(0, 26, id(f11), "Ti:%2.0fC   Tb:%2.0fC",
-        id(temp_ac_rad).state, id(temp_battery).state);
+      // ── Linha 3: temp inversor, temp bateria (piscam se altas), % carga ─
+      // Posições X fixas para cada campo evitam deslocamento com fonte proporcional
+      it.print(0,  26, id(f11), "Ti:");
+      if (!al_ti   || bv) it.printf(15, 26, id(f11), "%2.0fC", id(temp_ac_rad).state);
+      it.print(39, 26, id(f11), "Tb:");
+      if (!al_tb   || bv) it.printf(57, 26, id(f11), "%2.0fC", id(temp_battery).state);
+      it.print(81, 26, id(f11), "C:");
+      if (!al_load || bv) it.printf(92, 26, id(f11), "%2.0f%%", id(sys_load).state);
 
-      // Linha 4: barra de progresso visual do SOC
-      // contorno: 102px largura x 12px altura
-      it.rectangle(0, 41, 102, 12);
-      // preenchimento proporcional ao SOC (1px a 100px)
+      // ── Linha 4: consumo instantâneo (pisca se carga alta) ───────────────
+      if (!al_load || bv)
+        it.printf(0, 39, id(f10), "Consumo: %.0fW", id(load_power).state);
+
+      // ── Linha 5: barra de SOC (contorno fixo; interior e % piscam se baixo)
+      it.rectangle(0, 52, 102, 12);
       int bar = (int)id(soc).state;
-      if (bar > 0) it.filled_rectangle(1, 42, bar, 10);
-      // percentual numérico à direita da barra
-      it.printf(106, 41, id(f10), "%2.0f%%", id(soc).state);
+      if (bar > 0 && (!al_soc || bv)) it.filled_rectangle(1, 53, bar, 10);
+      if (!al_soc || bv) it.printf(106, 52, id(f10), "%2.0f%%", id(soc).state);
+      else               it.print( 106, 52, id(f10), "  ");

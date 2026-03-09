@@ -3,6 +3,8 @@
 Display OLED 0.96" SSD1306 I2C para monitoramento do inversor MUST PV19, rodando em ESP32-C3.  
 Os dados são lidos do **Home Assistant** (que já os recebe de outro ESPHome conectado ao inversor via RS485/Modbus), sem necessidade de conexão direta ao inversor.
 
+Inclui sistema de **alarmes visuais** (pisca a 1 Hz) e **alarmes sonoros** via buzzer ativo/passivo para valores críticos configuráveis.
+
 ## Arquitetura
 
 ```
@@ -13,9 +15,9 @@ ESP32 (esp32-pv19) ──► Home Assistant
                               │ API nativa
                               ▼
                     ESP32-C3 (este dispositivo)
-                              │ I2C
-                              ▼
-                       Display OLED SSD1306
+                              │ I2C               ┌─────────────┐
+                              ▼                   │ Buzzer ativo│
+                       Display OLED SSD1306   GPIO3 (configurável)
 ```
 
 ---
@@ -26,6 +28,7 @@ ESP32 (esp32-pv19) ──► Home Assistant
 |---|---|
 | Microcontrolador | ESP32-C3 (esp32-c3-devkitm-1) |
 | Display | SSD1306 OLED 0.96" 128×64 I2C |
+| Buzzer | Ativo ou passivo (opcional) |
 
 > Não há RS485 neste dispositivo. A leitura do inversor é feita por outro ESP32 e consumida pelo Home Assistant.
 
@@ -44,16 +47,26 @@ ESP32 (esp32-pv19) ──► Home Assistant
 
 > Endereço I2C padrão: `0x3C`. Alguns módulos usam `0x3D` (altere em `address:`).
 
+### Buzzer → ESP32-C3
+
+| Buzzer | ESP32-C3 | Descrição |
+|--------|----------|-----------|
+| +      | GPIO3    | Sinal PWM (LEDC) — configurável em `buzzer_gpio` |
+| −      | GND      | Terra |
+
+> Funciona com buzzers ativos (tom fixo) e passivos (tom por frequência PWM). O GPIO pode ser alterado na substitution `buzzer_gpio`.
+
 ---
 
 ## Layout do display (128×64 px)
 
 ```
 ┌──────────────────────────────────────┐
-│ B: 75%  +12A  [REDE]                 │  ← SOC + corrente bateria + fonte
-│ Vs:110V   Carga: 42%                 │  ← tensão saída AC + % carga
-│ Ti: 38C   Tb: 32C                    │  ← temp inversor + temp bateria
-│ [▓▓▓▓▓▓▓▓▓░░░]  75%                 │  ← barra visual SOC (102px)
+│ B:75%  +12A  [BAT ]                  │  ← SOC¹ + corrente + fonte²
+│ Vb:52.4V  Vs:110V                    │  ← tensão bateria³ + tensão AC⁴
+│ Ti:38C  Tb:32C  C:42%               │  ← temp inv⁵ + temp bat⁶ + carga⁷
+│ Consumo: 850W                        │  ← potência instantânea⁷
+│ [▓▓▓▓▓▓▓░░░]  75%                   │  ← barra visual SOC¹
 └──────────────────────────────────────┘
 ```
 
@@ -61,12 +74,65 @@ ESP32 (esp32-pv19) ──► Home Assistant
 |-------|-----------|
 | `B: XX%` | Estado de carga da bateria (SOC) |
 | `+/-XXA` | Corrente da bateria (+ carregando, − descarregando) |
-| `[REDE/BAT]` | Fonte de energia ativa (ver tabela abaixo) |
+| `[REDE]` / `[BAT ]` | Fonte de energia ativa |
+| `Vb: XX.XV` | Tensão da bateria (V) |
 | `Vs: XXXV` | Tensão de saída AC do inversor |
-| `Carga: XX%` | % de carga do sistema (potência / capacidade nominal) |
 | `Ti: XXC` | Temperatura do radiador AC do inversor |
 | `Tb: XXC` | Temperatura da bateria |
+| `C: XX%` | % de carga do sistema (potência / capacidade nominal) |
+| `Consumo: XXXW` | Potência de carga instantânea (W) |
 | Barra SOC | Representação visual de 0–100% (102 px de largura) |
+
+### Indicador de fonte
+
+| Estado `inv_work_state` | Valor | Exibição |
+|------------------------|-------|----------|
+| Grid / Bypass / Grid Charging | 3, 4, 6 | `[REDE]` fixo |
+| Outros (bateria/inversor) | demais | `[BAT ]` pisca 10× ao mudar, depois fixo |
+
+---
+
+## Alarmes
+
+### Alarmes visuais (pisca a 1 Hz)
+
+| Superscript | Condição | Campo que pisca |
+|---|---|---|
+| ¹ | `SOC < alarm_soc_min` | `B:XX%` + barra + `XX%` |
+| ³ | `Vbat < alarm_bat_v_min` | `Vb:XX.XV` |
+| ³ | `Vbat > alarm_bat_v_max` | `Vb:XX.XV` |
+| ⁴ | `Vs fora de [grid_v_min..grid_v_max]` | `Vs:XXXV` |
+| ⁵ | `Temp inversor > alarm_temp_inv_max` | `Ti:XXC` |
+| ⁶ | `Temp bateria > alarm_temp_bat_max` | `Tb:XXC` |
+| ⁷ | `Carga > alarm_load_max` | `C:XX%` + linha `Consumo` |
+
+### Alarmes sonoros (buzzer, verificados a cada 15 s)
+
+Os alarmes têm prioridade — apenas o mais grave toca:
+
+| Prioridade | Condições | Padrão |
+|---|---|---|
+| **Crítico** | Temp bateria alta **ou** temp inversor alta **ou** tensão bateria mínima | 5× bipe 100 ms a **2 kHz** |
+| **Alto** | SOC mínimo **ou** tensão bateria máxima | 3× bipe 200 ms a **1,5 kHz** |
+| **Médio** | Carga máxima **ou** tensão AC fora de faixa | 2× bipe 300 ms a **1 kHz** |
+
+---
+
+## Limiares de alarme configuráveis
+
+Todos os limiares estão nas `substitutions` do YAML — basta editar os valores:
+
+| Substitution | Padrão | Unidade | Descrição |
+|---|---|---|---|
+| `alarm_soc_min` | `20` | % | SOC mínimo |
+| `alarm_bat_v_min` | `46.0` | V | Tensão mínima da bateria |
+| `alarm_bat_v_max` | `58.4` | V | Tensão máxima da bateria |
+| `alarm_load_max` | `90` | % | Carga máxima do sistema |
+| `alarm_grid_v_min` | `100` | V | Tensão mínima da saída AC |
+| `alarm_grid_v_max` | `130` | V | Tensão máxima da saída AC |
+| `alarm_temp_inv_max` | `65` | °C | Temperatura máxima do inversor |
+| `alarm_temp_bat_max` | `45` | °C | Temperatura máxima da bateria |
+| `buzzer_gpio` | `GPIO3` | — | GPIO do buzzer |
 
 ---
 
@@ -82,7 +148,9 @@ Os `entity_id` são configurados nas `substitutions` do YAML. O padrão ESPHome 
 | `sys_load` | `ha_sys_load` | `sensor.must_inverter_pv19_system_load` | Carga do sistema (%) |
 | `temp_ac_rad` | `ha_temp_ac_rad` | `sensor.must_inverter_pv19_ac_radiator_temp` | Temperatura radiador AC (°C) |
 | `temp_battery` | `ha_temp_battery` | `sensor.must_inverter_pv19_battery_temp` | Temperatura da bateria (°C) |
+| `bat_voltage` | `ha_bat_voltage` | `sensor.must_inverter_pv19_battery_voltage` | Tensão da bateria (V) |
 | `bat_current` | `ha_bat_current` | `sensor.must_inverter_pv19_battery_current` | Corrente da bateria (A, negativo = descarga) |
+| `load_power` | `ha_load_power` | `sensor.must_inverter_pv19_load_power` | Potência de carga (W) |
 
 > Ajuste os valores nas `substitutions` se o nome do seu dispositivo ESPHome for diferente de `must-inverter-pv19`.
 
