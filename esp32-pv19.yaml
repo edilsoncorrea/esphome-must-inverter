@@ -77,6 +77,13 @@ modbus_controller:
     offline_skip_updates: 10
     command_throttle: 100ms
 
+globals:
+  # Capacidade nominal do banco de baterias (configurável pelo usuário via número abaixo)
+  - id: battery_capacity_ah
+    type: float
+    restore_value: true
+    initial_value: '200.0'
+
 binary_sensor:
   # CE: - Charger Errors from 15213 (id:charger_error_message))
   - platform: template
@@ -356,6 +363,7 @@ binary_sensor:
 sensor:
   - platform: modbus_controller
     address: 113
+    id: soc
     # name: "State of Charge"
     name: "Nível de carga"
     unit_of_measurement: "%"
@@ -551,6 +559,7 @@ sensor:
 
   - platform: modbus_controller
     address: 25205
+    id: battery_voltage
     # name: "Battery voltage"
     name: "Tensão da bateria"
     register_type: holding
@@ -626,6 +635,7 @@ sensor:
 
   - platform: modbus_controller
     address: 25215
+    id: load_power
     # name: "Load power"
     name: "Potência da carga"
     register_type: holding
@@ -822,6 +832,7 @@ sensor:
 
   - platform: modbus_controller
     address: 25273
+    id: battery_power
     register_type: holding
     value_type: S_WORD
     # name: "Battery power"
@@ -847,6 +858,71 @@ sensor:
     unit_of_measurement: "A"
     accuracy_decimals: 1
     icon: mdi:current-dc
+
+  # Autonomia estimada da bateria:
+  #   Descarregando → horas restantes com base na descarga atual
+  #   Na rede/carregando → horas teóricas com base na carga atual (load_power)
+  #     = "se a rede cair agora, quanto tempo a bateria aguenta?"
+  # No inversor MUST: battery_power > 0 = descarregando, < 0 = carregando/rede
+  - platform: template
+    name: "Autonomia da bateria"
+    id: battery_time_remaining
+    icon: mdi:battery-clock
+    unit_of_measurement: "h"
+    accuracy_decimals: 1
+    lambda: |-
+      float last_valid = id(battery_time_remaining).state;
+      if (isnan(last_valid)) last_valid = 0.0f;
+      float batt_w = id(battery_power).state;
+      float soc_pct = id(soc).state;
+      float v = id(battery_voltage).state;
+      float cap_ah = id(battery_capacity_ah);
+      float load_w = id(load_power).state;
+
+      if (isnan(soc_pct) || isnan(v) || cap_ah < 1.0f) {
+        return last_valid;
+      }
+      if (soc_pct < 0.0f) soc_pct = 0.0f;
+      if (soc_pct > 100.0f) soc_pct = 100.0f;
+
+      float remaining_wh = (soc_pct / 100.0f) * cap_ah * v;
+      float ref_w = NAN;
+
+      // Descarga real (convencao MUST: > 0).
+      if (!isnan(batt_w)) {
+        if (batt_w > 1.0f) {
+          ref_w = batt_w;
+        }
+      }
+
+      // Se nao houver descarga valida, usa carga atual para autonomia teorica.
+      if (isnan(ref_w)) {
+        if (isnan(load_w)) {
+          return last_valid;
+        }
+
+        // Em rede/carregando, remove do consumo a parcela usada para carregar a bateria.
+        float battery_charge_w = 0.0f;
+        if (!isnan(batt_w) && batt_w < -1.0f) {
+          battery_charge_w = fabsf(batt_w);
+        }
+
+        float net_house_w = load_w - battery_charge_w;
+        if (net_house_w < 1.0f) {
+          // Fallback: alguns modelos/reportes ja trazem load sem a parcela da bateria.
+          if (load_w >= 1.0f) {
+            ref_w = load_w;
+          } else {
+            return last_valid;
+          }
+        } else {
+          ref_w = net_house_w;
+        }
+      }
+
+      float autonomy_h = remaining_wh / ref_w;
+      return autonomy_h;
+    update_interval: 60s
 
 select:
   - platform: modbus_controller
@@ -1010,4 +1086,19 @@ number:
     address: 20142
     value_type: U_WORD
     internal: True
+
+  # Número para configurar a capacidade do banco de baterias via Home Assistant
+  # O valor é persistido no global 'battery_capacity_ah' acima
+  - platform: template
+    name: "Capacidade da bateria"
+    unit_of_measurement: "Ah"
+    min_value: 10
+    max_value: 3000
+    step: 10
+    mode: box
+    lambda: "return id(battery_capacity_ah);"
+    set_action:
+      - globals.set:
+          id: battery_capacity_ah
+          value: !lambda "return x;"
     

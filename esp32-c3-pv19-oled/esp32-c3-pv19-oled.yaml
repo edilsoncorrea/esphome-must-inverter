@@ -127,6 +127,7 @@ interval:
     then:
       - script.execute: alarm_check
 
+
 script:
   # ── Verificação de prioridade de alarmes ──────────────────────────────────
   - id: alarm_check
@@ -266,6 +267,7 @@ sensor:
     id: load_power
     entity_id: ${ha_load_power}
     internal: true
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # DISPLAY OLED SSD1306 0.96" 128x64 I2C
