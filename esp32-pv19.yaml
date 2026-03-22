@@ -84,6 +84,12 @@ globals:
     restore_value: true
     initial_value: '200.0'
 
+  # Eficiência média do inversor (0.70 a 0.99)
+  - id: inverter_efficiency
+    type: float
+    restore_value: true
+    initial_value: '0.92'
+
 binary_sensor:
   # CE: - Charger Errors from 15213 (id:charger_error_message))
   - platform: template
@@ -924,6 +930,51 @@ sensor:
       return autonomy_h;
     update_interval: 60s
 
+  # Autonomia equivalente (teste):
+  #   Converte carga AC líquida em demanda DC equivalente usando eficiência do inversor.
+  #   Objetivo: aproximar "se cair a rede agora" sem depender do sinal de carga/descarga atual.
+  - platform: template
+    name: "Autonomia bateria equivalente"
+    id: battery_time_remaining_equiv
+    icon: mdi:battery-sync
+    unit_of_measurement: "h"
+    accuracy_decimals: 1
+    lambda: |-
+      float last_valid = id(battery_time_remaining_equiv).state;
+      if (isnan(last_valid)) last_valid = 0.0f;
+
+      float soc_pct = id(soc).state;
+      float v_bat = id(battery_voltage).state;
+      float cap_ah = id(battery_capacity_ah);
+      float load_w = id(load_power).state;
+      float eta = id(inverter_efficiency);
+
+      if (isnan(soc_pct) || isnan(v_bat) || isnan(load_w)) {
+        return last_valid;
+      }
+      if (cap_ah < 1.0f) {
+        return last_valid;
+      }
+      if (eta < 0.70f || eta > 0.99f) {
+        return last_valid;
+      }
+
+      if (soc_pct < 0.0f) soc_pct = 0.0f;
+      if (soc_pct > 100.0f) soc_pct = 100.0f;
+      if (load_w < 1.0f) {
+        return last_valid;
+      }
+
+      float remaining_wh = (soc_pct / 100.0f) * cap_ah * v_bat;
+      float dc_equivalent_w = load_w / eta;
+      if (dc_equivalent_w < 1.0f) {
+        return last_valid;
+      }
+
+      float autonomy_h = remaining_wh / dc_equivalent_w;
+      return autonomy_h;
+    update_interval: 60s
+
 select:
   - platform: modbus_controller
     id: energy_use_mode
@@ -1101,4 +1152,18 @@ number:
       - globals.set:
           id: battery_capacity_ah
           value: !lambda "return x;"
+
+  # Número para ajustar a eficiência do inversor usada no modelo equivalente (teste)
+  - platform: template
+    name: "Eficiência inversor"
+    unit_of_measurement: "%"
+    min_value: 70
+    max_value: 99
+    step: 1
+    mode: box
+    lambda: "return id(inverter_efficiency) * 100.0f;"
+    set_action:
+      - globals.set:
+          id: inverter_efficiency
+          value: !lambda "return x / 100.0f;"
     
